@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Phone, Lock, Mail, ArrowRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 
-export default function Login({ onLogin }: { onLogin: () => void }) {
+export default function Login({ onLogin, onBack }: { onLogin: () => void; onBack: () => void }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
@@ -69,10 +69,16 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
           </button>
         </form>
 
-        <div className="mt-8 pt-8 border-t border-slate-800 text-center">
+        <div className="mt-8 pt-8 border-t border-slate-800 text-center space-y-4">
           <p className="text-slate-500 text-sm">
             Don't have an account? <button className="text-blue-500 hover:underline font-medium">Contact Sales</button>
           </p>
+          <button 
+            onClick={onBack}
+            className="text-slate-400 hover:text-white text-sm font-medium transition-colors"
+          >
+            ← Back to Home
+          </button>
         </div>
       </motion.div>
     </div>

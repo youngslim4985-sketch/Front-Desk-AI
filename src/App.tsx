@@ -3,6 +3,7 @@ import LandingPage from './components/LandingPage';
 import Onboarding from './components/Onboarding';
 import Dashboard from './components/Dashboard';
 import Login from './components/Login';
+import Widget from './components/Widget';
 
 type View = 'landing' | 'login' | 'onboarding' | 'dashboard';
 
@@ -24,11 +25,11 @@ export default function App() {
   return (
     <div className="min-h-screen bg-black">
       {view === 'landing' && (
-        <LandingPage onStart={handleStart} />
+        <LandingPage onStart={handleStart} onLogin={() => setView('login')} />
       )}
       
       {view === 'login' && (
-        <Login onLogin={handleLogin} />
+        <Login onLogin={handleLogin} onBack={() => setView('landing')} />
       )}
 
       {view === 'onboarding' && (
@@ -42,14 +43,12 @@ export default function App() {
         <Dashboard />
       )}
 
-      {/* Simple navigation helper for demo purposes */}
-      {view === 'landing' && (
-        <button 
-          onClick={() => setView('login')}
-          className="fixed bottom-8 right-8 text-slate-500 hover:text-white text-sm font-medium transition-colors"
-        >
-          Already have an account? Login
-        </button>
+      {/* Floating Chat Widget for Demo (Except in Dashboard) */}
+      {view !== 'dashboard' && (
+        <Widget 
+          businessName="T & F Investments" 
+          businessId="tf-invest-123" 
+        />
       )}
     </div>
   );

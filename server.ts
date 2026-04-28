@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import { createClient } from "@supabase/supabase-js";
 import Stripe from "stripe";
 import twilio from "twilio";
+import { GoogleGenAI } from "@google/genai";
 import path from "path";
 import { fileURLToPath } from "url";
 import { createServer as createViteServer } from "vite";
@@ -20,7 +21,8 @@ async function startServer() {
   app.use(cors());
   app.use(express.json());
 
-  // Initialize Supabase (Lazy load to prevent crash if env vars missing)
+  // --- PRIVATE CLIENT INITIALIZERS (Lazy load to keep keys hidden until used) ---
+
   const getSupabase = () => {
     const url = process.env.SUPABASE_URL;
     const key = process.env.SUPABASE_ANON_KEY;
@@ -28,14 +30,12 @@ async function startServer() {
     return createClient(url, key);
   };
 
-  // Initialize Stripe (Lazy load)
   const getStripe = () => {
     const key = process.env.STRIPE_SECRET_KEY;
     if (!key) return null;
     return new Stripe(key);
   };
 
-  // Initialize Twilio (Lazy load)
   const getTwilio = () => {
     const sid = process.env.TWILIO_ACCOUNT_SID;
     const auth = process.env.TWILIO_AUTH_TOKEN;
@@ -43,8 +43,56 @@ async function startServer() {
     return twilio(sid, auth);
   };
 
-  // API ROUTES
+  const getGemini = () => {
+    const key = process.env.GEMINI_API_KEY;
+    if (!key) return null;
+    return new GoogleGenAI({ apiKey: key });
+  };
+
+  // --- API ROUTES ---
+
   app.get("/api/health", (req, res) => res.json({ status: "OK" }));
+
+  // SECURE CHAT ENDPOINT
+  app.post("/api/chat", async (req, res) => {
+    const { businessName, userMessage, history } = req.body;
+    const genAI = getGemini();
+
+    if (!genAI) {
+      return res.status(500).json({ error: "Gemini API key not configured on server" });
+    }
+
+    try {
+      const contents = history.map((msg: any) => ({
+        role: msg.role === "user" ? "user" : "model",
+        parts: [{ text: msg.content }],
+      }));
+
+      // Add the latest message
+      contents.push({
+        role: "user",
+        parts: [{ text: userMessage }],
+      });
+
+      const result = await genAI.models.generateContent({
+        model: "gemini-1.5-flash",
+        contents,
+        config: {
+          systemInstruction: `You are a professional AI receptionist for ${businessName}. 
+Your goal is to answer questions helpfuly and move the conversation toward booking an appointment or capturing a lead.
+Be concise, polite, and professional.
+If the user asks about booking, pricing, or wants to talk to someone, ask for their name and phone number so a team member can follow up.
+Current Business: ${businessName}`,
+        }
+      });
+
+      const responseText = result.text;
+      res.json({ response: responseText });
+    } catch (err: any) {
+      console.error("Gemini Error:", err);
+      res.status(500).json({ error: "Failed to generate AI response" });
+    }
+  });
 
   // VAPI AVAILABILITY
   app.post("/api/vapi/availability", async (req, res) => {
@@ -185,6 +233,32 @@ async function startServer() {
 
       if (error) throw error;
       res.json({ clients });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // LEADS CAPTURE
+  app.post("/api/leads", async (req, res) => {
+    const { name, phone, email, business_id, inquiry } = req.body;
+    const supabase = getSupabase();
+    if (!supabase) return res.status(500).json({ error: "Supabase not configured" });
+
+    try {
+      // Store leads in 'clients' table for now with a special note or separate table
+      // Let's assume a 'leads' table exists or use 'clients'
+      const { data, error } = await supabase.from("clients").insert([
+        { 
+          name, 
+          phone, 
+          email, 
+          business_id, 
+          notes: `[LEAD FROM CHAT] Inquiry: ${inquiry}`
+        }
+      ]).select();
+
+      if (error) throw error;
+      res.json({ success: true, lead: data?.[0] });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }

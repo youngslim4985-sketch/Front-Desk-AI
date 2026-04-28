@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
 import { Phone, CheckCircle, ArrowRight, Shield, Zap, Globe } from 'lucide-react';
 
-export default function LandingPage({ onStart }: { onStart: () => void }) {
+export default function LandingPage({ onStart, onLogin }: { onStart: () => void; onLogin: () => void }) {
   return (
     <div className="min-h-screen bg-black text-white selection:bg-blue-500/30">
       {/* Navigation */}
@@ -13,9 +13,9 @@ export default function LandingPage({ onStart }: { onStart: () => void }) {
           <span className="text-xl font-bold tracking-tight">Front Desk AI</span>
         </div>
         <div className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-400">
-          <a href="#" className="hover:text-white transition-colors">Features</a>
-          <a href="#" className="hover:text-white transition-colors">Pricing</a>
-          <a href="#" className="hover:text-white transition-colors">Testimonials</a>
+          <a href="#features" className="hover:text-white transition-colors">Features</a>
+          <a href="#pricing" className="hover:text-white transition-colors">Pricing</a>
+          <button onClick={onLogin} className="hover:text-white transition-colors">Login</button>
         </div>
         <button 
           onClick={onStart}

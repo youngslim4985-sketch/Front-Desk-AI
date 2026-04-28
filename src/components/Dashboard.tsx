@@ -12,7 +12,10 @@ import {
   XCircle,
   ChevronRight,
   LayoutDashboard,
-  LogOut
+  LogOut,
+  Code,
+  Copy,
+  Check
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -45,6 +48,7 @@ const MOCK_CLIENTS: Client[] = [
   { id: '1', name: 'John Doe', phone: '+1234567890', email: 'john@example.com', notes: 'Prefers morning slots' },
   { id: '2', name: 'Jane Smith', phone: '+1987654321', email: 'jane@example.com', notes: 'VIP client' },
   { id: '3', name: 'Harvey Specter', phone: '+1555000111', email: 'harvey@pearson.com', notes: 'Always on time' },
+  { id: '4', name: 'Sarah Wilson', phone: '+1444555666', email: 'sarah@example.com', notes: '[LEAD FROM CHAT] Inquiry: How much for a full dental cleaning?' },
 ];
 
 // --- Components ---
@@ -79,6 +83,10 @@ export default function Dashboard() {
   const [isAddClientOpen, setIsAddClientOpen] = React.useState(false);
   const [newClient, setNewClient] = React.useState({ name: '', phone: '', email: '', notes: '' });
   const [clients, setClients] = React.useState<Client[]>(MOCK_CLIENTS);
+  const [copied, setCopied] = React.useState(false);
+
+  const businessName = "T & F Investments";
+  const businessId = "tf-invest-123";
 
   const handleAddClient = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -86,7 +94,7 @@ export default function Dashboard() {
       const response = await fetch('/api/clients', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...newClient, business_id: 'default_biz' })
+        body: JSON.stringify({ ...newClient, business_id: businessId })
       });
       const data = await response.json();
       if (data.success) {
@@ -104,6 +112,29 @@ export default function Dashboard() {
     }
   };
 
+  const leads = clients.filter(c => c.notes?.includes('[LEAD FROM CHAT]'));
+
+  const scriptSnippet = `<script>
+  (function () {
+    const iframe = document.createElement("iframe");
+    iframe.src = "${window.location.origin}/widget?business=${businessId}";
+    iframe.style.position = "fixed";
+    iframe.style.bottom = "0";
+    iframe.style.right = "0";
+    iframe.style.width = "380px";
+    iframe.style.height = "600px";
+    iframe.style.border = "none";
+    iframe.style.zIndex = "9999";
+    document.body.appendChild(iframe);
+  })();
+</script>`;
+
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(scriptSnippet);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   return (
     <div className="flex h-screen bg-black text-white overflow-hidden">
       {/* Sidebar */}
@@ -117,9 +148,10 @@ export default function Dashboard() {
 
         <nav className="flex-1 space-y-2">
           <SidebarItem icon={LayoutDashboard} label="Dashboard" active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} />
+          <SidebarItem icon={Plus} label="Leads" active={activeTab === 'leads'} onClick={() => setActiveTab('leads')} />
           <SidebarItem icon={Calendar} label="Appointments" active={activeTab === 'appointments'} onClick={() => setActiveTab('appointments')} />
-          <SidebarItem icon={MessageSquare} label="Messages" active={activeTab === 'messages'} onClick={() => setActiveTab('messages')} />
           <SidebarItem icon={Users} label="Customers" active={activeTab === 'customers'} onClick={() => setActiveTab('customers')} />
+          <SidebarItem icon={Code} label="Embed Widget" active={activeTab === 'embed'} onClick={() => setActiveTab('embed')} />
           <SidebarItem icon={BarChart3} label="Analytics" active={activeTab === 'analytics'} onClick={() => setActiveTab('analytics')} />
         </nav>
 
@@ -148,21 +180,21 @@ export default function Dashboard() {
             {/* Live Analytics Summary */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
               <div className="bg-white p-6 rounded-xl text-black shadow-lg">
-                <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-2">Total Bookings</h3>
-                <p className="text-4xl font-bold">24</p>
+                <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-2">Inbound Leads</h3>
+                <p className="text-4xl font-bold">{leads.length}</p>
               </div>
 
               <div className="bg-white p-6 rounded-xl text-black shadow-lg">
-                <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-2">Revenue Generated</h3>
+                <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-2">Est. Pipeline Revenue</h3>
                 <p className="text-4xl font-bold">$3,200</p>
               </div>
             </div>
 
             {/* Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-              <StatCard label="Total Calls" value="1,284" icon={Phone} trend="+12%" />
-              <StatCard label="Appointments" value="84" icon={Calendar} trend="+5%" />
-              <StatCard label="Missed Calls Recovered" value="42" icon={MessageSquare} trend="+18%" />
+              <StatCard label="Total Bot Chats" value="1,284" icon={MessageSquare} trend="+12%" />
+              <StatCard label="Leads Captured" value={leads.length.toString()} icon={Plus} trend="+5%" />
+              <StatCard label="Appointments" value="84" icon={Calendar} trend="+18%" />
               <StatCard label="Revenue Saved" value="$12,400" icon={BarChart3} trend="+15%" />
             </div>
 
@@ -217,6 +249,48 @@ export default function Dashboard() {
               </div>
             </div>
           </>
+        ) : activeTab === 'leads' ? (
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
+             <div className="p-6 border-b border-slate-800 flex justify-between items-center">
+                <h2 className="text-xl font-bold text-white">Inbound Chat Leads</h2>
+                <div className="bg-blue-600/10 text-blue-400 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest">
+                  Live Capture Active
+                </div>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="text-slate-400 text-sm uppercase tracking-wider">
+                      <th className="px-6 py-4 font-medium">Lead</th>
+                      <th className="px-6 py-4 font-medium">Contact</th>
+                      <th className="px-6 py-4 font-medium">Inquiry</th>
+                      <th className="px-6 py-4 font-medium">Date</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800">
+                    {leads.map((lead) => (
+                      <tr key={lead.id} className="hover:bg-slate-800/50 transition-colors">
+                        <td className="px-6 py-4">
+                          <div className="font-bold text-white">{lead.name}</div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="text-slate-300">{lead.phone}</div>
+                          <div className="text-xs text-slate-500">{lead.email}</div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="text-sm text-slate-400 bg-slate-800/50 p-2 rounded-lg border border-slate-700/50 italic">
+                            "{lead.notes.replace('[LEAD FROM CHAT] Inquiry: ', '')}"
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-slate-500">
+                          Just now
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+          </div>
         ) : activeTab === 'customers' ? (
           <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden relative">
             <div className="p-6 border-b border-slate-800 flex justify-between items-center">
@@ -327,6 +401,48 @@ export default function Dashboard() {
                 </div>
               )}
             </AnimatePresence>
+          </div>
+        ) : activeTab === 'embed' ? (
+          <div className="max-w-3xl space-y-8">
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 rounded-xl bg-blue-600/10 flex items-center justify-center text-blue-500">
+                  <Code size={24} />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-white">Installation Script</h3>
+                  <p className="text-slate-400 text-sm">Paste this onto your website to activate the AI receptionist.</p>
+                </div>
+              </div>
+
+              <div className="bg-black border border-slate-800 rounded-xl p-6 relative group">
+                <pre className="text-blue-400 text-sm overflow-x-auto font-mono leading-relaxed">
+                  {scriptSnippet}
+                </pre>
+                <button 
+                  onClick={copyToClipboard}
+                  className="absolute top-4 right-4 bg-slate-800 hover:bg-slate-700 text-white p-2 rounded-lg transition-all border border-slate-700/50"
+                  title="Copy to clipboard"
+                >
+                  {copied ? <Check size={18} className="text-emerald-500" /> : <Copy size={18} />}
+                </button>
+              </div>
+
+              <div className="grid grid-cols-3 gap-6 mt-12">
+                <div className="p-4 rounded-xl border border-slate-800 bg-slate-800/30">
+                  <div className="text-white font-bold text-xs uppercase tracking-widest mb-2">Step 1</div>
+                  <div className="text-slate-400 text-xs">Copy the script above</div>
+                </div>
+                <div className="p-4 rounded-xl border border-slate-800 bg-slate-800/30">
+                  <div className="text-white font-bold text-xs uppercase tracking-widest mb-2">Step 2</div>
+                  <div className="text-slate-400 text-xs">Paste before &lt;/body&gt;</div>
+                </div>
+                <div className="p-4 rounded-xl border border-slate-800 bg-slate-800/30">
+                  <div className="text-white font-bold text-xs uppercase tracking-widest mb-2">Step 3</div>
+                  <div className="text-slate-400 text-xs">AI goes live instantly</div>
+                </div>
+              </div>
+            </div>
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center h-64 text-slate-500">
