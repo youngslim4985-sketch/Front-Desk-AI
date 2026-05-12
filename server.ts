@@ -9,6 +9,7 @@ import { randomUUID } from "crypto";
 import path from "path";
 import { createServer as createViteServer } from "vite";
 import { ConversationEngine } from "./server/engine";
+import { orchestrator } from "./server/autonomous/orchestration/workflow";
 
 dotenv.config();
 
@@ -41,6 +42,17 @@ async function startServer() {
   // --- API ROUTES ---
 
   app.get("/api/health", (req, res) => res.json({ status: "OK", timestamp: new Date() }));
+
+  // NEW: Autonomous Orchestration Endpoint
+  app.post("/api/orchestrate", async (req, res) => {
+    const { input, approved } = req.body;
+    try {
+      const result = await orchestrator.execute(input, approved);
+      res.json(result);
+    } catch (err: any) {
+      res.status(400).json({ error: err.message });
+    }
+  });
 
   // THE BOUNDED DECISION KERNEL
   app.post("/api/conversation/process", async (req, res) => {

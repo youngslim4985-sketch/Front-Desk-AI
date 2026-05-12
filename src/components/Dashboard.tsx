@@ -17,7 +17,8 @@ import {
   Copy,
   Check,
   AlertTriangle,
-  UserCheck
+  UserCheck,
+  ShieldAlert
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -81,7 +82,7 @@ const StatCard = ({ label, value, icon: Icon, trend }: { label: string, value: s
   </div>
 );
 
-export default function Dashboard() {
+export default function Dashboard({ onSwitch }: { onSwitch: () => void }) {
   const [activeTab, setActiveTab] = React.useState('dashboard');
   const [isAddClientOpen, setIsAddClientOpen] = React.useState(false);
   const [newClient, setNewClient] = React.useState({ name: '', phone: '', email: '', notes: '' });
@@ -158,6 +159,15 @@ export default function Dashboard() {
           <SidebarItem icon={Users} label="Customers" active={activeTab === 'customers'} onClick={() => setActiveTab('customers')} />
           <SidebarItem icon={Code} label="Embed Widget" active={activeTab === 'embed'} onClick={() => setActiveTab('embed')} />
           <SidebarItem icon={BarChart3} label="Analytics" active={activeTab === 'analytics'} onClick={() => setActiveTab('analytics')} />
+          <div className="pt-2">
+            <button 
+              onClick={onSwitch}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-lg bg-indigo-600/10 text-indigo-400 border border-indigo-600/20 hover:bg-indigo-600 hover:text-white transition-all group"
+            >
+              <ShieldAlert size={20} className="group-hover:animate-pulse" />
+              <span className="font-bold text-xs uppercase tracking-widest">Safety Kernel</span>
+            </button>
+          </div>
         </nav>
 
         <div className="pt-6 border-t border-slate-800 space-y-2">

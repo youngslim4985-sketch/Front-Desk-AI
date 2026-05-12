@@ -4,8 +4,9 @@ import Onboarding from './components/Onboarding';
 import Dashboard from './components/Dashboard';
 import Login from './components/Login';
 import Widget from './components/Widget';
+import AutonomousDashboard from './components/AutonomousDashboard';
 
-type View = 'landing' | 'login' | 'onboarding' | 'dashboard';
+type View = 'landing' | 'login' | 'onboarding' | 'dashboard' | 'autonomous';
 
 export default function App() {
   const [view, setView] = useState<View>('landing');
@@ -40,7 +41,11 @@ export default function App() {
       )}
 
       {view === 'dashboard' && isLoggedIn && (
-        <Dashboard />
+        <Dashboard onSwitch={() => setView('autonomous')} />
+      )}
+
+      {view === 'autonomous' && isLoggedIn && (
+        <AutonomousDashboard onBack={() => setView('dashboard')} />
       )}
 
       {/* Floating Chat Widget for Demo (Except in Dashboard) */}
