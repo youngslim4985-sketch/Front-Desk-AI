@@ -1,5 +1,3 @@
-import { GoogleGenAI } from "@google/genai";
-
 export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
@@ -7,102 +5,67 @@ export interface ChatMessage {
 
 export type Intent = "PRICING_INQUIRY" | "BOOKING_REQUEST" | "ESCALATION_THREAT" | "GENERAL_INQUIRY";
 
-export interface WorkflowResult {
-  response: string;
-  action?: "capture_lead" | "book_appointment" | "escalate" | null;
-  workflowId: string;
-  intent: Intent;
+export interface ConversationState {
+  sessionId: string;
+  businessId: string;
+  status: "idle" | "awaiting_info" | "resolving" | "completed" | "escalated";
+  context: any;
+  lastUpdated: string;
 }
 
-// Bounded Decision System (Client-Side Implementation)
-// Adheres to gemini-api skill: "Always call Gemini API from the frontend"
+export interface ProcessResult {
+  response: string;
+  state: ConversationState;
+  events: any[];
+}
+
 export class WorkflowEngine {
-  private ai: GoogleGenAI;
+  private sessionId: string;
+  private state: ConversationState | undefined;
 
   constructor() {
-    this.ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    this.sessionId = Math.random().toString(36).substring(7);
   }
 
-  private resolveIntent(userMessage: string): Intent {
-    const message = userMessage.toLowerCase();
-    
-    if (/complain|angry|error|wrong|issue|not working|terrible|hate|sucks/i.test(message)) {
-      return "ESCALATION_THREAT";
-    }
-    
-    if (/price|cost|quote|how much|rate|fee|payment/i.test(message)) {
-      return "PRICING_INQUIRY";
-    }
-    
-    if (/book|appointment|schedule|meeting|visit|reservation/i.test(message)) {
-      return "BOOKING_REQUEST";
-    }
-    
-    return "GENERAL_INQUIRY";
-  }
-
-  public async run(businessName: string, userMessage: string, history: ChatMessage[]): Promise<WorkflowResult> {
-    const intent = this.resolveIntent(userMessage);
-
-    // AI Generation Step (Probabilistic Helper)
-    const response = await this.ai.models.generateContent({
-      model: "gemini-3-flash-preview", // Correct model from skill
-      contents: [
-        ...history.map(m => ({ role: m.role === "user" ? "user" : "model", parts: [{ text: m.content }] })),
-        { role: "user", parts: [{ text: userMessage }] }
-      ],
-      config: {
-        systemInstruction: `You are a professional AI receptionist for ${businessName}.
-        
-        Intent detected: ${intent}.
-        
-        Rules:
-        1. If PRICING_INQUIRY, be helpful but say a human will provide a precise quote.
-        2. If BOOKING_REQUEST, encourage them and say we'll confirm the slot.
-        3. If ESCALATION_THREAT, be extremely apologetic and say a supervisor is notified.
-        4. Be concise (max 2 sentences). No fluff.`,
-        temperature: 0.7,
-      }
-    });
-
-    const result = {
-      response: response.text || "I'm sorry, I'm having trouble processing that.",
-      intent,
-      action: this.mapIntentToAction(intent),
-      workflowId: Math.random().toString(36).substring(7)
-    };
-
-    // Deterministic Side Effect: Remote Audit Logging (Async)
-    this.logWorkflow(businessName, userMessage, result);
-
-    return result;
-  }
-
-  private mapIntentToAction(intent: Intent): WorkflowResult["action"] {
-    switch (intent) {
-      case "ESCALATION_THREAT": return "escalate";
-      case "PRICING_INQUIRY":
-      case "BOOKING_REQUEST": return "capture_lead";
-      default: return null;
-    }
-  }
-
-  private async logWorkflow(businessName: string, userMessage: string, result: WorkflowResult) {
+  public async run(businessName: string, userMessage: string, history: ChatMessage[]): Promise<{ response: string; action: any; workflowId: string }> {
     try {
-      await fetch("/api/bot/log", {
+      const response = await fetch("/api/conversation/process", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          sessionId: this.sessionId,
+          businessId: "tf-invest-123",
           businessName,
           userMessage,
-          botResponse: result.response,
-          intent: result.intent,
-          workflowId: result.workflowId
+          history,
+          currentState: this.state
         })
       });
+
+      if (!response.ok) throw new Error("Failed to process conversation");
+
+      const result: ProcessResult = await response.json();
+      this.state = result.state;
+
+      return {
+        response: result.response,
+        action: this.mapStatusToAction(result.state.status),
+        workflowId: result.state.sessionId
+      };
     } catch (err) {
-      console.warn("Audit Log Failed:", err);
+      console.error("Workflow Runtime Error:", err);
+      return {
+        response: "I'm having trouble connecting to my brain. Please try again in a moment.",
+        action: null,
+        workflowId: "error"
+      };
     }
+  }
+
+  private mapStatusToAction(status: string) {
+    if (status === "escalated") return "escalate";
+    if (status === "awaiting_info" || status === "completed") return "capture_lead";
+    return null;
   }
 }
 

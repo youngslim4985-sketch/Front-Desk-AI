@@ -5,14 +5,12 @@ import { createClient } from "@supabase/supabase-js";
 import Stripe from "stripe";
 import twilio from "twilio";
 import { GoogleGenAI } from "@google/genai";
+import { randomUUID } from "crypto";
 import path from "path";
-import { fileURLToPath } from "url";
 import { createServer as createViteServer } from "vite";
+import { ConversationEngine } from "./server/engine";
 
 dotenv.config();
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 async function startServer() {
   const app = express();
@@ -22,18 +20,12 @@ async function startServer() {
   app.use(express.json());
 
   // --- PRIVATE CLIENT INITIALIZERS ---
-
+  
   const getSupabase = () => {
     const url = process.env.SUPABASE_URL;
     const key = process.env.SUPABASE_ANON_KEY;
     if (!url || !key) return null;
     return createClient(url, key);
-  };
-
-  const getStripe = () => {
-    const key = process.env.STRIPE_SECRET_KEY;
-    if (!key) return null;
-    return new Stripe(key);
   };
 
   const getTwilio = () => {
@@ -43,9 +35,63 @@ async function startServer() {
     return twilio(sid, auth);
   };
 
+  // Initialize Engine
+  const engine = process.env.GEMINI_API_KEY ? new ConversationEngine(process.env.GEMINI_API_KEY) : null;
+
   // --- API ROUTES ---
 
   app.get("/api/health", (req, res) => res.json({ status: "OK", timestamp: new Date() }));
+
+  // THE BOUNDED DECISION KERNEL
+  app.post("/api/conversation/process", async (req, res) => {
+    const { sessionId, businessId, businessName, userMessage, history, currentState } = req.body;
+    const supabase = getSupabase();
+
+    if (!engine) {
+      return res.status(500).json({ error: "Gemini API key not configured on server" });
+    }
+
+    try {
+      // Execute the decision engine
+      const result = await engine.processTurn(
+        sessionId || randomUUID(),
+        businessId || "default",
+        businessName || "Our Business",
+        userMessage,
+        history || [],
+        currentState
+      );
+
+      // Persist Events to Supabase (Event Store)
+      if (supabase) {
+        const { error } = await supabase.from("bot_events").insert(
+          result.events.map(ev => ({
+            session_id: ev.sessionId,
+            event_type: ev.type,
+            payload: ev.payload,
+            timestamp: ev.timestamp,
+            business_id: businessId
+          }))
+        );
+        if (error) console.error("Event Store Error:", error.message);
+
+        // Update Client/Lead record if escalated or completed
+        if (result.state.status === "escalated" || result.state.status === "completed") {
+          await supabase.from("clients").upsert([{
+            phone: result.state.context.userPhone || "Unknown",
+            name: result.state.context.userName || "Anonymous",
+            notes: `[SYSTEM] Status: ${result.state.status} | Session: ${sessionId}`,
+            business_id: businessId
+          }], { onConflict: 'phone' });
+        }
+      }
+
+      res.json(result);
+    } catch (err: any) {
+      console.error("Kernel Panic:", err);
+      res.status(500).json({ error: "Autonomous systems failure", details: err.message });
+    }
+  });
 
   // Audit Logging (The Tracing Layer)
   app.post("/api/bot/log", async (req, res) => {
