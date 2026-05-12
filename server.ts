@@ -21,7 +21,7 @@ async function startServer() {
   app.use(cors());
   app.use(express.json());
 
-  // --- PRIVATE CLIENT INITIALIZERS (Lazy load to keep keys hidden until used) ---
+  // --- PRIVATE CLIENT INITIALIZERS ---
 
   const getSupabase = () => {
     const url = process.env.SUPABASE_URL;
@@ -43,93 +43,38 @@ async function startServer() {
     return twilio(sid, auth);
   };
 
-  const getGemini = () => {
-    const key = process.env.GEMINI_API_KEY;
-    if (!key) return null;
-    return new GoogleGenAI({ apiKey: key });
-  };
-
   // --- API ROUTES ---
 
-  app.get("/api/health", (req, res) => res.json({ status: "OK" }));
+  app.get("/api/health", (req, res) => res.json({ status: "OK", timestamp: new Date() }));
 
-  // --- WORKFLOW ENGINE (The Bounded Decision System) ---
-  
-  interface ChatMessage {
-    role: "user" | "assistant";
-    content: string;
-  }
-
-  interface WorkflowResult {
-    response: string;
-    action?: "capture_lead" | "book_appointment" | "escalate" | null;
-    workflowId?: string;
-  }
-
-  // Pure Deterministic Logic (The Guardrails)
-  const resolveIntent = (userMessage: string) => {
-    const message = userMessage.toLowerCase();
-    if (/price|cost|quote|how much/i.test(message)) return "PRICING_INQUIRY";
-    if (/book|appointment|schedule|meeting|visit/i.test(message)) return "BOOKING_REQUEST";
-    if (/complain|angry|error|wrong|issue|not working/i.test(message)) return "ESCALATION_THREAT";
-    return "GENERAL_INQUIRY";
-  };
-
-  // The Structured Orchestrator
-  const runWorkflow = async (businessName: string, userMessage: string, history: ChatMessage[]): Promise<WorkflowResult> => {
-    const genAI = getGemini();
-    if (!genAI) throw new Error("Gemini not configured");
-
-    const intent = resolveIntent(userMessage);
+  // Audit Logging (The Tracing Layer)
+  app.post("/api/bot/log", async (req, res) => {
+    const { businessName, userMessage, botResponse, intent, workflowId } = req.body;
     const supabase = getSupabase();
-
-    // AI Generation Step (Probabilistic Helper)
-    const model = genAI.models.generateContent({
-      model: "gemini-1.5-flash",
-      contents: [
-        ...history.map(m => ({ role: m.role === "user" ? "user" : "model", parts: [{ text: m.content }] })),
-        { role: "user", parts: [{ text: userMessage }] }
-      ],
-      config: {
-        systemInstruction: `You are a professional AI receptionist for ${businessName}. 
-        Intent detected by system: ${intent}.
-        
-        Rules:
-        1. If PRICING_INQUIRY, provide a helpful general response but insist on a follow-up for a specific quote.
-        2. If BOOKING_REQUEST, encourage them and say the office will confirm details.
-        3. If ESCALATION_THREAT, be extremely apologetic and say a supervisor has been notified immediately.
-        4. Conciseness is mandatory. Max 2 sentences.`,
-      }
-    });
-
-    const aiResponse = (await model).text;
-
-    // Side Effect: Auto-Escalate high-friction intents
-    if (intent === "ESCALATION_THREAT" && supabase) {
-      await supabase.from("clients").insert([{
-        name: "Urgent Escalation",
-        notes: `[ESCALATED] User issue: ${userMessage}`,
-        business_id: 'tf-invest-123'
-      }]);
-    }
-
-    return {
-      response: aiResponse,
-      action: intent === "ESCALATION_THREAT" ? "escalate" : (intent !== "GENERAL_INQUIRY" ? "capture_lead" : null),
-      workflowId: Math.random().toString(36).substring(7)
-    };
-  };
-
-  // SECURE CHAT ENDPOINT
-  app.post("/api/chat", async (req, res) => {
-    const { businessName, userMessage, history } = req.body;
     
-    try {
-      const result = await runWorkflow(businessName, userMessage, history);
-      res.json(result);
-    } catch (err: any) {
-      console.error("Workflow Error:", err);
-      res.status(500).json({ error: "System is re-calibrating. Please try again." });
+    if (supabase) {
+      try {
+        await supabase.from("bot_logs").insert([{
+          business_name: businessName,
+          user_message: userMessage,
+          bot_response: botResponse,
+          intent: intent,
+          workflow_id: workflowId
+        }]);
+
+        if (intent === "ESCALATION_THREAT") {
+          await supabase.from("clients").insert([{
+            name: "Urgent Escalation",
+            notes: `[ESCALATED] Workflow ID: ${workflowId} | Message: ${userMessage}`,
+            business_id: 'tf-invest-123'
+          }]);
+        }
+        res.json({ success: true });
+      } catch (err) {
+        res.status(500).json({ error: "Failed to log event" });
+      }
+    } else {
+      res.json({ success: true, warning: "Supabase not connected" });
     }
   });
 

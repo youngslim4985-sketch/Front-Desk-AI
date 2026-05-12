@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import { workflowEngine } from "../lib/workflow";
 import { Send, User, Bot, Loader2, Calendar } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -52,38 +53,17 @@ export default function ChatInterface({ businessName, businessId }: { businessNa
     setInput("");
     setLoading(true);
 
-    // Trigger lead capture check
-    if (/book|appointment|call|price|someone|talk|visit/i.test(userMessage)) {
-      setTimeout(() => setShowLeadCapture(true), 1500);
-    }
-
     try {
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          businessName,
-          userMessage,
-          history: messages
-        }),
-      });
+      // Execute the frontend bounded decision system (Adheres to gemini-api skill)
+      const result = await workflowEngine.run(businessName, userMessage, messages);
 
-      const data = await response.json();
+      setMessages([...newMessages, { role: "assistant", content: result.response }]);
       
-      if (data.error) {
-        throw new Error(data.error);
-      }
-
-      setMessages([...newMessages, { role: "assistant", content: data.response || "I'm sorry, I couldn't process that." }]);
-      
-      // Explicitly trigger UI based on server-side decision
-      if (data.action === "capture_lead") {
+      // Explicitly trigger UI based on workflow decision
+      if (result.action === "capture_lead") {
         setShowLeadCapture(true);
-      } else if (data.action === "escalate") {
-        // You could show a special priority toast here
-        console.warn("High priority escalation triggered");
+      } else if (result.action === "escalate") {
+        console.warn("High priority escalation triggered:", result.workflowId);
       }
     } catch (err) {
       console.error("Chat Error:", err);
