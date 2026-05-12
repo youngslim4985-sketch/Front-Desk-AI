@@ -81,6 +81,9 @@ export default function ChatInterface({ businessName, businessId }: { businessNa
       // Explicitly trigger UI based on server-side decision
       if (data.action === "capture_lead") {
         setShowLeadCapture(true);
+      } else if (data.action === "escalate") {
+        // You could show a special priority toast here
+        console.warn("High priority escalation triggered");
       }
     } catch (err) {
       console.error("Chat Error:", err);

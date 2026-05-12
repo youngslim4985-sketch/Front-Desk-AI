@@ -62,18 +62,28 @@ async function startServer() {
 
   interface WorkflowResult {
     response: string;
-    action?: "capture_lead" | "book_appointment" | null;
+    action?: "capture_lead" | "book_appointment" | "escalate" | null;
+    workflowId?: string;
   }
 
-  // The Orchestrator
+  // Pure Deterministic Logic (The Guardrails)
+  const resolveIntent = (userMessage: string) => {
+    const message = userMessage.toLowerCase();
+    if (/price|cost|quote|how much/i.test(message)) return "PRICING_INQUIRY";
+    if (/book|appointment|schedule|meeting|visit/i.test(message)) return "BOOKING_REQUEST";
+    if (/complain|angry|error|wrong|issue|not working/i.test(message)) return "ESCALATION_THREAT";
+    return "GENERAL_INQUIRY";
+  };
+
+  // The Structured Orchestrator
   const runWorkflow = async (businessName: string, userMessage: string, history: ChatMessage[]): Promise<WorkflowResult> => {
     const genAI = getGemini();
     if (!genAI) throw new Error("Gemini not configured");
 
-    // Intent Detection Step (The "Compiler" phase)
-    const isLeadInquiry = /price|book|cost|appointment|meeting|visit|talk|call|quote/i.test(userMessage);
+    const intent = resolveIntent(userMessage);
+    const supabase = getSupabase();
 
-    // AI Generation Step (The "Probabilistic" helper)
+    // AI Generation Step (Probabilistic Helper)
     const model = genAI.models.generateContent({
       model: "gemini-1.5-flash",
       contents: [
@@ -82,18 +92,31 @@ async function startServer() {
       ],
       config: {
         systemInstruction: `You are a professional AI receptionist for ${businessName}. 
-        Answer the user's question concisely. 
-        If they express interest in pricing, booking, or a visit, offer to have a human follow up.
-        DO NOT make up specific prices or times unless provided in context.`,
+        Intent detected by system: ${intent}.
+        
+        Rules:
+        1. If PRICING_INQUIRY, provide a helpful general response but insist on a follow-up for a specific quote.
+        2. If BOOKING_REQUEST, encourage them and say the office will confirm details.
+        3. If ESCALATION_THREAT, be extremely apologetic and say a supervisor has been notified immediately.
+        4. Conciseness is mandatory. Max 2 sentences.`,
       }
     });
 
     const aiResponse = (await model).text;
 
-    // Resolver (The "Deterministic" logic)
+    // Side Effect: Auto-Escalate high-friction intents
+    if (intent === "ESCALATION_THREAT" && supabase) {
+      await supabase.from("clients").insert([{
+        name: "Urgent Escalation",
+        notes: `[ESCALATED] User issue: ${userMessage}`,
+        business_id: 'tf-invest-123'
+      }]);
+    }
+
     return {
       response: aiResponse,
-      action: isLeadInquiry ? "capture_lead" : null
+      action: intent === "ESCALATION_THREAT" ? "escalate" : (intent !== "GENERAL_INQUIRY" ? "capture_lead" : null),
+      workflowId: Math.random().toString(36).substring(7)
     };
   };
 
@@ -106,7 +129,7 @@ async function startServer() {
       res.json(result);
     } catch (err: any) {
       console.error("Workflow Error:", err);
-      res.status(500).json({ error: "Receptionist is busy. Please try again." });
+      res.status(500).json({ error: "System is re-calibrating. Please try again." });
     }
   });
 

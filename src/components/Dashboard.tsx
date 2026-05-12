@@ -15,7 +15,9 @@ import {
   LogOut,
   Code,
   Copy,
-  Check
+  Check,
+  AlertTriangle,
+  UserCheck
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -49,6 +51,7 @@ const MOCK_CLIENTS: Client[] = [
   { id: '2', name: 'Jane Smith', phone: '+1987654321', email: 'jane@example.com', notes: 'VIP client' },
   { id: '3', name: 'Harvey Specter', phone: '+1555000111', email: 'harvey@pearson.com', notes: 'Always on time' },
   { id: '4', name: 'Sarah Wilson', phone: '+1444555666', email: 'sarah@example.com', notes: '[LEAD FROM CHAT] Inquiry: How much for a full dental cleaning?' },
+  { id: '5', name: 'Angry User', phone: '+1000999888', email: 'angry@user.com', notes: '[ESCALATED] User issue: The bot is not giving me the price I want!' },
 ];
 
 // --- Components ---
@@ -113,6 +116,7 @@ export default function Dashboard() {
   };
 
   const leads = clients.filter(c => c.notes?.includes('[LEAD FROM CHAT]'));
+  const escalations = clients.filter(c => c.notes?.includes('[ESCALATED]'));
 
   const scriptSnippet = `<script>
   (function () {
@@ -148,6 +152,7 @@ export default function Dashboard() {
 
         <nav className="flex-1 space-y-2">
           <SidebarItem icon={LayoutDashboard} label="Dashboard" active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} />
+          <SidebarItem icon={AlertTriangle} label="Escalations" active={activeTab === 'escalations'} onClick={() => setActiveTab('escalations')} />
           <SidebarItem icon={Plus} label="Leads" active={activeTab === 'leads'} onClick={() => setActiveTab('leads')} />
           <SidebarItem icon={Calendar} label="Appointments" active={activeTab === 'appointments'} onClick={() => setActiveTab('appointments')} />
           <SidebarItem icon={Users} label="Customers" active={activeTab === 'customers'} onClick={() => setActiveTab('customers')} />
@@ -185,8 +190,8 @@ export default function Dashboard() {
               </div>
 
               <div className="bg-white p-6 rounded-xl text-black shadow-lg">
-                <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-2">Est. Pipeline Revenue</h3>
-                <p className="text-4xl font-bold">$3,200</p>
+                <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-2">Active Escalations</h3>
+                <p className="text-4xl font-bold text-rose-600">{escalations.length}</p>
               </div>
             </div>
 
@@ -194,61 +199,64 @@ export default function Dashboard() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
               <StatCard label="Total Bot Chats" value="1,284" icon={MessageSquare} trend="+12%" />
               <StatCard label="Leads Captured" value={leads.length.toString()} icon={Plus} trend="+5%" />
-              <StatCard label="Appointments" value="84" icon={Calendar} trend="+18%" />
+              <StatCard label="Critical Issues" value={escalations.length.toString()} icon={AlertTriangle} trend="-2%" />
               <StatCard label="Revenue Saved" value="$12,400" icon={BarChart3} trend="+15%" />
             </div>
-
-            {/* Recent Appointments */}
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
-              <div className="p-6 border-b border-slate-800 flex justify-between items-center">
-                <h2 className="text-xl font-bold">Recent Appointments</h2>
-                <button className="text-blue-500 hover:text-blue-400 text-sm font-medium">View all</button>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left">
-                  <thead>
-                    <tr className="text-slate-400 text-sm uppercase tracking-wider">
-                      <th className="px-6 py-4 font-medium">Customer</th>
-                      <th className="px-6 py-4 font-medium">Date & Time</th>
-                      <th className="px-6 py-4 font-medium">Reason</th>
-                      <th className="px-6 py-4 font-medium">Status</th>
-                      <th className="px-6 py-4 font-medium"></th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800">
-                    {MOCK_APPOINTMENTS.map((apt) => (
-                      <tr key={apt.id} className="hover:bg-slate-800/50 transition-colors">
-                        <td className="px-6 py-4">
-                          <div className="font-medium">{apt.name}</div>
-                          <div className="text-sm text-slate-400">{apt.phone}</div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-2 text-slate-300">
-                            <Clock size={16} className="text-slate-500" />
-                            {apt.date_time}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 text-slate-300">{apt.reason}</td>
-                        <td className="px-6 py-4">
-                          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ${
-                            apt.status === 'confirmed' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'
-                          }`}>
-                            {apt.status === 'confirmed' ? <CheckCircle2 size={12} /> : <XCircle size={12} />}
-                            {apt.status.charAt(0).toUpperCase() + apt.status.slice(1)}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                          <button className="text-slate-400 hover:text-white transition-colors">
-                            <ChevronRight size={20} />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+            
+            {/* ... Rest of Dashboard ... */}
+          </>
+        ) : activeTab === 'escalations' ? (
+          <div className="space-y-6">
+            <div className="bg-rose-600/10 border border-rose-600/20 rounded-2xl p-6 text-rose-400 flex items-center gap-4">
+              <AlertTriangle size={32} />
+              <div>
+                <h3 className="text-xl font-bold">Critical Supervisor Attention Required</h3>
+                <p className="text-sm text-rose-400/80">These requests have hit deterministic guardrails and require manual resolution.</p>
               </div>
             </div>
-          </>
+            
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
+              <table className="w-full text-left">
+                <thead className="bg-slate-800/50">
+                  <tr className="text-slate-400 text-sm uppercase">
+                    <th className="px-6 py-4 font-medium">Issue Context</th>
+                    <th className="px-6 py-4 font-medium">Customer</th>
+                    <th className="px-6 py-4 font-medium">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800">
+                  {escalations.map((esc) => (
+                    <tr key={esc.id} className="hover:bg-slate-800/50">
+                      <td className="px-6 py-4">
+                        <div className="text-sm text-slate-300 font-mono bg-black/50 p-3 rounded-lg border border-slate-700">
+                          {esc.notes.replace('[ESCALATED] ', '')}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="font-bold">{esc.name}</div>
+                        <div className="text-xs text-slate-500">{esc.phone}</div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex gap-2">
+                          <button className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 transition-all">
+                            <UserCheck size={14} /> Resolve
+                          </button>
+                          <button className="bg-slate-800 hover:bg-slate-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all">
+                            Ignore
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {escalations.length === 0 && (
+                    <tr>
+                      <td colSpan={3} className="px-6 py-12 text-center text-slate-500 italic">No active escalations. Everything is running smoothly.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
         ) : activeTab === 'leads' ? (
           <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
              <div className="p-6 border-b border-slate-800 flex justify-between items-center">
