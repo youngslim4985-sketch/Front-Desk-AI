@@ -77,6 +77,11 @@ export default function ChatInterface({ businessName, businessId }: { businessNa
       }
 
       setMessages([...newMessages, { role: "assistant", content: data.response || "I'm sorry, I couldn't process that." }]);
+      
+      // Explicitly trigger UI based on server-side decision
+      if (data.action === "capture_lead") {
+        setShowLeadCapture(true);
+      }
     } catch (err) {
       console.error("Chat Error:", err);
       setMessages([

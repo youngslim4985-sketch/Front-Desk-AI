@@ -53,44 +53,60 @@ async function startServer() {
 
   app.get("/api/health", (req, res) => res.json({ status: "OK" }));
 
+  // --- WORKFLOW ENGINE (The Bounded Decision System) ---
+  
+  interface ChatMessage {
+    role: "user" | "assistant";
+    content: string;
+  }
+
+  interface WorkflowResult {
+    response: string;
+    action?: "capture_lead" | "book_appointment" | null;
+  }
+
+  // The Orchestrator
+  const runWorkflow = async (businessName: string, userMessage: string, history: ChatMessage[]): Promise<WorkflowResult> => {
+    const genAI = getGemini();
+    if (!genAI) throw new Error("Gemini not configured");
+
+    // Intent Detection Step (The "Compiler" phase)
+    const isLeadInquiry = /price|book|cost|appointment|meeting|visit|talk|call|quote/i.test(userMessage);
+
+    // AI Generation Step (The "Probabilistic" helper)
+    const model = genAI.models.generateContent({
+      model: "gemini-1.5-flash",
+      contents: [
+        ...history.map(m => ({ role: m.role === "user" ? "user" : "model", parts: [{ text: m.content }] })),
+        { role: "user", parts: [{ text: userMessage }] }
+      ],
+      config: {
+        systemInstruction: `You are a professional AI receptionist for ${businessName}. 
+        Answer the user's question concisely. 
+        If they express interest in pricing, booking, or a visit, offer to have a human follow up.
+        DO NOT make up specific prices or times unless provided in context.`,
+      }
+    });
+
+    const aiResponse = (await model).text;
+
+    // Resolver (The "Deterministic" logic)
+    return {
+      response: aiResponse,
+      action: isLeadInquiry ? "capture_lead" : null
+    };
+  };
+
   // SECURE CHAT ENDPOINT
   app.post("/api/chat", async (req, res) => {
     const { businessName, userMessage, history } = req.body;
-    const genAI = getGemini();
-
-    if (!genAI) {
-      return res.status(500).json({ error: "Gemini API key not configured on server" });
-    }
-
+    
     try {
-      const contents = history.map((msg: any) => ({
-        role: msg.role === "user" ? "user" : "model",
-        parts: [{ text: msg.content }],
-      }));
-
-      // Add the latest message
-      contents.push({
-        role: "user",
-        parts: [{ text: userMessage }],
-      });
-
-      const result = await genAI.models.generateContent({
-        model: "gemini-1.5-flash",
-        contents,
-        config: {
-          systemInstruction: `You are a professional AI receptionist for ${businessName}. 
-Your goal is to answer questions helpfuly and move the conversation toward booking an appointment or capturing a lead.
-Be concise, polite, and professional.
-If the user asks about booking, pricing, or wants to talk to someone, ask for their name and phone number so a team member can follow up.
-Current Business: ${businessName}`,
-        }
-      });
-
-      const responseText = result.text;
-      res.json({ response: responseText });
+      const result = await runWorkflow(businessName, userMessage, history);
+      res.json(result);
     } catch (err: any) {
-      console.error("Gemini Error:", err);
-      res.status(500).json({ error: "Failed to generate AI response" });
+      console.error("Workflow Error:", err);
+      res.status(500).json({ error: "Receptionist is busy. Please try again." });
     }
   });
 
