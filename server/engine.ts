@@ -22,10 +22,6 @@ export class ConversationEngine {
     userMessage: string, 
     history: ChatMessage[]
   ): Promise<{ intent: Intent; confidence: number; parameters: any }> {
-    const model = (this.ai as any).getGenerativeModel({ 
-      model: "gemini-1.5-flash" 
-    });
-
     const systemPrompt = `You are the Intent Decoder for ${businessName}'s receptionist.
 Your only job is to analyze the user's latest message and output a JSON object representing their intent.
 
@@ -46,18 +42,18 @@ Output Format:
   }
 }`;
 
-    const result = await model.generateContent({
-      contents: [
-        { role: "user", parts: [{ text: `${systemPrompt}\n\nUser Message: ${userMessage}` }] }
-      ],
-      generationConfig: { 
+    const response = await this.ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: `User Message: ${userMessage}`,
+      config: { 
+        systemInstruction: systemPrompt,
         responseMimeType: "application/json",
         temperature: 0.1 
       }
     });
 
     try {
-      const text = result.response.text();
+      const text = response.text || "{}";
       return JSON.parse(text);
     } catch (e) {
       console.error("Failed to parse intent JSON:", e);
@@ -143,10 +139,11 @@ Output Format:
     }
     else {
       // Default generative response for general queries
-      const genModel = (this.ai as any).getGenerativeModel({ model: "gemini-1.5-flash" });
-      const prompt = `You are a receptionist for ${businessName}. Answer this question briefly: "${userMessage}"`;
-      const genResult = await genModel.generateContent(prompt);
-      botResponse = genResult.response.text();
+      const response = await this.ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: `You are a receptionist for ${businessName}. Answer this question briefly: "${userMessage}"`
+      });
+      botResponse = response.text || "I'm sorry, I'm not sure how to help with that.";
     }
 
     state.lastUpdated = new Date().toISOString();

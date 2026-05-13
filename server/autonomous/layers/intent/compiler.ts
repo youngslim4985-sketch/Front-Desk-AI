@@ -7,7 +7,7 @@ export class IntentCompiler {
 
   constructor() {
     if (process.env.GEMINI_API_KEY) {
-      this.ai = new GoogleGenAI(process.env.GEMINI_API_KEY);
+      this.ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
     }
   }
 
@@ -18,7 +18,6 @@ export class IntentCompiler {
 
     if (this.ai) {
       try {
-        const model = this.ai.getGenerativeModel({ model: "gemini-1.5-flash" });
         const systemPrompt = `
           You are a DevOps Intent Compiler. Your job is to parse natural language commands into a structured JSON intent.
           
@@ -37,19 +36,20 @@ export class IntentCompiler {
           }
         `;
 
-        const result = await model.generateContent([
-          { text: systemPrompt },
-          { text: `Parse this command: "${userInput}"` }
-        ]);
+        const response = await this.ai.models.generateContent({
+          model: "gemini-3-flash-preview",
+          contents: `Parse this command: "${userInput}"`,
+          config: {
+            systemInstruction: systemPrompt,
+            responseMimeType: "application/json"
+          }
+        });
 
-        const text = result.response.text();
-        const jsonMatch = text.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          const parsed = JSON.parse(jsonMatch[0]);
-          action = parsed.action || action;
-          params = parsed.params || params;
-          environment = parsed.environment || environment;
-        }
+        const text = response.text || "";
+        const parsed = JSON.parse(text);
+        action = parsed.action || action;
+        params = parsed.params || params;
+        environment = parsed.environment || environment;
       } catch (e) {
         console.error("AI Compilation failed, falling back to regex", e);
         const fallback = this.parseUserInputFallback(userInput);

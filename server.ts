@@ -10,6 +10,7 @@ import path from "path";
 import { createServer as createViteServer } from "vite";
 import { ConversationEngine } from "./server/engine";
 import { orchestrator } from "./server/autonomous/orchestration/workflow";
+import { VoiceReceptionist } from "./server/voice-engine";
 
 dotenv.config();
 
@@ -38,10 +39,86 @@ async function startServer() {
 
   // Initialize Engine
   const engine = process.env.GEMINI_API_KEY ? new ConversationEngine(process.env.GEMINI_API_KEY) : null;
+  const voiceReceptionist = process.env.GEMINI_API_KEY ? new VoiceReceptionist(process.env.GEMINI_API_KEY) : null;
 
   // --- API ROUTES ---
 
   app.get("/api/health", (req, res) => res.json({ status: "OK", timestamp: new Date() }));
+
+  // --- TWILIO VOICE WEBHOOKS ---
+  app.post("/api/twilio/voice/incoming", (req, res) => {
+    const twiml = new twilio.twiml.VoiceResponse();
+    twiml.say({ voice: 'Polly.Amy', language: 'en-GB' }, "Hello, thanks for calling Front Desk A I. How can I help you today?");
+    twiml.gather({
+      input: ['speech'],
+      action: "/api/twilio/voice/handle-input",
+      timeout: 3,
+      speechTimeout: 'auto'
+    });
+    res.type("text/xml").send(twiml.toString());
+  });
+
+  app.post("/api/twilio/voice/handle-input", async (req, res) => {
+    const transcript = req.body.SpeechResult;
+    const callSid = req.body.CallSid;
+
+    if (!voiceReceptionist) {
+      const twiml = new twilio.twiml.VoiceResponse();
+      twiml.say("System error. Voice engine not configured.");
+      return res.type("text/xml").send(twiml.toString());
+    }
+
+    try {
+      const responseText = await voiceReceptionist.generateResponse(transcript || "Hello?");
+      const twimlString = voiceReceptionist.generateTwiML(responseText, "/api/twilio/voice/handle-input");
+      
+      const supabase = getSupabase();
+      if (supabase) {
+        await supabase.from("call_transcripts").insert([{
+          call_sid: callSid,
+          transcript: transcript || "[No Speech Detected]",
+          response: responseText,
+          timestamp: new Date().toISOString()
+        }]);
+      }
+
+      res.type("text/xml").send(twimlString);
+    } catch (err) {
+      console.error("Voice Engine Error:", err);
+      const twiml = new twilio.twiml.VoiceResponse();
+      twiml.say("I'm sorry, I'm having trouble processing that call right now.");
+      res.type("text/xml").send(twiml.toString());
+    }
+  });
+
+  // Twilio Phone Number Management
+  app.get("/api/twilio/numbers/search", async (req, res) => {
+    const twilioClient = getTwilio();
+    if (!twilioClient) return res.status(500).json({ error: "Twilio not configured" });
+
+    try {
+      const numbers = await twilioClient.availablePhoneNumbers('US').local.list({ limit: 5 });
+      res.json(numbers);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post("/api/twilio/numbers/buy", async (req, res) => {
+    const { phoneNumber } = req.body;
+    const twilioClient = getTwilio();
+    if (!twilioClient) return res.status(500).json({ error: "Twilio not configured" });
+
+    try {
+      const purchased = await twilioClient.incomingPhoneNumbers.create({
+        phoneNumber,
+        voiceUrl: `${req.protocol}://${req.get('host')}/api/twilio/voice/incoming`
+      });
+      res.json({ success: true, purchased });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
 
   // NEW: Autonomous Orchestration Endpoint
   app.post("/api/orchestrate", async (req, res) => {

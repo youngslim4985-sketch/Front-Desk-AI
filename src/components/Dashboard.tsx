@@ -18,9 +18,11 @@ import {
   Check,
   AlertTriangle,
   UserCheck,
-  ShieldAlert
+  ShieldAlert,
+  Mic2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import VoiceDashboard from './VoiceDashboard';
 
 // --- Types ---
 interface Appointment {
@@ -153,6 +155,7 @@ export default function Dashboard({ onSwitch }: { onSwitch: () => void }) {
 
         <nav className="flex-1 space-y-2">
           <SidebarItem icon={LayoutDashboard} label="Dashboard" active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} />
+          <SidebarItem icon={Mic2} label="Voice" active={activeTab === 'voice'} onClick={() => setActiveTab('voice')} />
           <SidebarItem icon={AlertTriangle} label="Escalations" active={activeTab === 'escalations'} onClick={() => setActiveTab('escalations')} />
           <SidebarItem icon={Plus} label="Leads" active={activeTab === 'leads'} onClick={() => setActiveTab('leads')} />
           <SidebarItem icon={Calendar} label="Appointments" active={activeTab === 'appointments'} onClick={() => setActiveTab('appointments')} />
@@ -215,6 +218,8 @@ export default function Dashboard({ onSwitch }: { onSwitch: () => void }) {
             
             {/* ... Rest of Dashboard ... */}
           </>
+        ) : activeTab === 'voice' ? (
+          <VoiceDashboard />
         ) : activeTab === 'escalations' ? (
           <div className="space-y-6">
             <div className="bg-rose-600/10 border border-rose-600/20 rounded-2xl p-6 text-rose-400 flex items-center gap-4">
