@@ -13,17 +13,29 @@ export interface Policy {
 
 export const policies: Policy[] = [
   {
-    name: 'production_no_destructive',
+    name: 'high_stakes_pi_approval',
     conditions: {
       environments: ['production'],
-      actions: ['deploy_service', 'delete_service']
+      actions: ['open_legal_matter']
     },
     constraint: (intent) => {
-      // Logic: Production requires specific tags, or the 'force' flag
-      return intent.params.tag !== 'latest' || intent.params.force === true;
+      // Logic: Personal Injury (PI) matters require senior partner approval
+      return intent.params.practice !== 'litigation' || intent.params.priority !== 'high';
     },
-    reason: 'Production requires versioned tags, not "latest"',
+    reason: 'High-stakes personal injury matters require senior operator verification',
     metadata: { severity: 'high' }
+  },
+  {
+    name: 'conflict_check_mandatory',
+    conditions: {
+      environments: ['*'],
+      actions: ['open_legal_matter']
+    },
+    constraint: (_intent) => {
+      // In a real system, this would check if a conflict_check event was recently cleared
+      return true; 
+    },
+    metadata: { requiredStep: 'conflict_search' }
   }
 ];
 

@@ -1,40 +1,40 @@
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import twilio from "twilio";
 
 export class VoiceReceptionist {
-  private ai: GoogleGenAI;
+  private genAI: GoogleGenerativeAI;
 
   constructor(apiKey: string) {
-    this.ai = new GoogleGenAI({ apiKey });
+    this.genAI = new GoogleGenerativeAI(apiKey);
   }
 
-  async generateResponse(transcript: string, history: { role: 'user' | 'model', parts: { text: string }[] }[] = []) {
+  async generateResponse(transcript: string, history: any[] = []) {
     const systemPrompt = `
-      You are a professional AI receptionist for a business.
-      Your goal is to handle incoming phone calls gracefully.
+      You are a high-stakes Legal Receptionist for a litigation law firm for T & F Investments.
+      Your goal is to handle incoming calls with extreme care and professional empathy.
       
-      Guidelines:
-      1. Be concise but warm.
-      2. Ask for the caller's name if not known.
-      3. Handle appointment requests (say you'll check availability).
-      4. Handle general inquiries about services.
-      5. If they want to speak to a human, say you'll transfer them (though for now just take a message).
+      CRITICAL INSTRUCTIONS:
+      1. Identify if this is a "Potential New Matter" or an "Existing Case".
+      2. If it's a new matter, determine the practice area (Personal Injury, Employment, Criminal, etc.).
+      3. Look for "Statute of Limitations" triggers (deadlines, hearing dates, service of process).
+      4. Be concise but warm. Never give legal advice.
       
       Response Format: 
-      Just output the text you want the AI to speak. Keep it under 2 sentences if possible for voice flow.
+      Just output the text you want the AI to speak. Keep it under 2 sentences for natural flow.
     `;
 
-    // History is not directly supported in the new generateContent call in the same way as chats.create
-    // We'll combine history and system prompt into the prompt for simplicity or use ai.chats.create
-    const chat = this.ai.chats.create({
-      model: "gemini-3-flash-preview",
-      config: {
+    try {
+      const model = this.genAI.getGenerativeModel({ 
+        model: "gemini-1.5-flash",
         systemInstruction: systemPrompt
-      }
-    });
+      });
 
-    const result = await chat.sendMessage({ message: transcript });
-    return result.text || "I'm sorry, I didn't quite catch that. Could you repeat?";
+      const response = await model.generateContent(transcript);
+      return response.response.text();
+    } catch (err) {
+      console.error("Gemini Backend Error:", err);
+      return "I'm sorry, I'm having trouble processing your request. One moment while I connect you.";
+    }
   }
 
   generateTwiML(message: string, nextActionUrl: string): string {

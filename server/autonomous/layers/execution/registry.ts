@@ -20,47 +20,47 @@ export class FunctionRegistry {
   }
 }
 
-// Demo functions
-export const deployService: ExecutableFunction = {
-  name: 'deploy_service',
-  timeout: 120,
-  maxBudget: 5.0,
+// Legal Operation Functions
+export const openLegalMatter: ExecutableFunction = {
+  name: 'open_legal_matter',
+  timeout: 60,
+  maxBudget: 2.0,
   
   async execute(params: any, context: any): Promise<any> {
     if (context.dryRun) {
       return { 
-        wouldDeploy: `${params.service}:${params.tag}`,
-        endpoint: `https://staging-${params.service}.example.com`
+        action: 'Provisioning Matter Folder',
+        practiceArea: params.practice || 'General Litigation',
+        status: 'PENDING_CONFLICT_CHECK'
       };
     }
     
-    // Simulating real work
-    await new Promise(r => setTimeout(r, 2000));
+    await new Promise(r => setTimeout(r, 1500));
     
     return {
       success: true,
-      endpoint: `https://${context.environment}-${params.service}.example.com`,
-      deployedAt: new Date().toISOString()
+      matterId: `MAT-${Math.floor(Math.random()*10000)}`,
+      createdAt: new Date().toISOString()
     };
   },
   
   async rollback(result: any, _context: any): Promise<void> {
-    console.log(`[rollback] Rolling back deployment from ${result.deployedAt}`);
+    console.log(`[rollback] Archiving failed matter ${result.matterId}`);
     await new Promise(r => setTimeout(r, 1000));
   }
 };
 
-export const runTests: ExecutableFunction = {
-  name: 'run_tests',
-  timeout: 45,
-  maxBudget: 1.0,
+export const runConflictCheck: ExecutableFunction = {
+  name: 'run_conflict_check',
+  timeout: 30,
+  maxBudget: 0.5,
   
   async execute(params: any, context: any): Promise<any> {
     if (context.dryRun) {
-      return { testsToRun: params.suite };
+      return { action: 'Searching Database', query: params.party };
     }
     
     await new Promise(r => setTimeout(r, 1000));
-    return { passed: true, testsRun: 42, failures: 0 };
+    return { status: 'CLEAN', searchCount: 154, timestamp: new Date().toISOString() };
   }
 };

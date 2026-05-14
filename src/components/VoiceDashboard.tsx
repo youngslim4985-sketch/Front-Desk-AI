@@ -56,13 +56,13 @@ export default function VoiceDashboard() {
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-white">Voice Receptionist Settings</h2>
-          <p className="text-slate-400">Configure your AI incoming call handler and phone numbers.</p>
+          <h2 className="text-2xl font-bold text-white">After-Hours Intake Protection</h2>
+          <p className="text-slate-400">Manage Twilio lines protected by the LexGuard AI voice kernel.</p>
         </div>
         <div className="flex gap-4">
           <div className="px-4 py-2 bg-blue-500/10 border border-blue-500/20 rounded-lg flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-            <span className="text-xs font-mono text-blue-500 text-xs font-bold uppercase tracking-widest">Voice Engine Primary</span>
+            <span className="text-xs font-mono text-blue-500 text-xs font-bold uppercase tracking-widest">Intake Engine Primary</span>
           </div>
         </div>
       </div>
@@ -144,19 +144,19 @@ export default function VoiceDashboard() {
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
             <h3 className="font-bold text-white mb-4 flex items-center gap-2">
               <Activity className="text-purple-500" />
-              Voice Personality
+              Intake Personality
             </h3>
             <div className="space-y-4">
               <div className="p-3 bg-black/50 rounded-lg border border-slate-800">
                 <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Tone of Voice</label>
-                <div className="text-sm text-white">Professional & Warm (Amy - British)</div>
+                <div className="text-sm text-white">Legal Professional & Empathetic (Amy - British)</div>
               </div>
               <div className="p-3 bg-black/50 rounded-lg border border-slate-800">
                 <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Greeting Message</label>
-                <div className="text-xs text-slate-400 italic">"Hello, thanks for calling Front Desk A I. How can I help you today?"</div>
+                <div className="text-xs text-slate-400 italic">"Thank you for calling. This is LexGuard. Are you calling regarding a new legal matter?"</div>
               </div>
               <button className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-sm font-bold transition-all">
-                Edit Persona Prompt
+                Edit Intake Protocols
               </button>
             </div>
           </div>

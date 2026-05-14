@@ -1,4 +1,4 @@
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { randomUUID } from "crypto";
 import { 
   ChatMessage, 
@@ -9,10 +9,10 @@ import {
 } from "./types";
 
 export class ConversationEngine {
-  private ai: GoogleGenAI;
+  private genAI: GoogleGenerativeAI;
 
   constructor(apiKey: string) {
-    this.ai = new GoogleGenAI({ apiKey });
+    this.genAI = new GoogleGenerativeAI(apiKey);
   }
 
   // 1. Probabilistic Decoder (Gemini)
@@ -42,18 +42,14 @@ Output Format:
   }
 }`;
 
-    const response = await this.ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: `User Message: ${userMessage}`,
-      config: { 
-        systemInstruction: systemPrompt,
-        responseMimeType: "application/json",
-        temperature: 0.1 
-      }
-    });
-
     try {
-      const text = response.text || "{}";
+      const model = this.genAI.getGenerativeModel({ 
+        model: "gemini-1.5-flash",
+        systemInstruction: systemPrompt
+      });
+
+      const response = await model.generateContent(`User Message: ${userMessage}`);
+      const text = response.response.text() || "{}";
       return JSON.parse(text);
     } catch (e) {
       console.error("Failed to parse intent JSON:", e);
@@ -139,11 +135,13 @@ Output Format:
     }
     else {
       // Default generative response for general queries
-      const response = await this.ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: `You are a receptionist for ${businessName}. Answer this question briefly: "${userMessage}"`
-      });
-      botResponse = response.text || "I'm sorry, I'm not sure how to help with that.";
+      try {
+        const model = this.genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const response = await model.generateContent(`You are a receptionist for ${businessName}. Answer this question briefly: "${userMessage}"`);
+        botResponse = response.response.text() || "I'm sorry, I'm not sure how to help with that.";
+      } catch (err) {
+        botResponse = "I'm sorry, I'm having trouble connecting right now.";
+      }
     }
 
     state.lastUpdated = new Date().toISOString();

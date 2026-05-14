@@ -1,7 +1,7 @@
 import { IntentCompiler } from '../layers/intent/compiler';
 import { PolicyEngine } from '../layers/policy/engine';
 import { SimulationEngine } from '../layers/simulation/simulator';
-import { FunctionRegistry, deployService, runTests } from '../layers/execution/registry';
+import { FunctionRegistry, openLegalMatter, runConflictCheck } from '../layers/execution/registry';
 import { ExecutionRunner } from '../layers/execution/runner';
 import { AuditLogger } from '../layers/audit/logger';
 import { CircuitBreaker, BudgetGuard, RollbackRegistry, Timebox } from '../layers/failure/safety-kernel';
@@ -19,19 +19,18 @@ export class AutonomousOrchestrator {
   private budgetGuard = new BudgetGuard(50.0);
   
   constructor() {
-    this.registry.register(deployService);
-    this.registry.register(runTests);
+    this.registry.register(openLegalMatter);
+    this.registry.register(runConflictCheck);
     this.simulationEngine = new SimulationEngine(this.registry);
     this.runner = new ExecutionRunner(this.registry, this.rollbackRegistry);
   }
   
-  async execute(userInput: string, approved: boolean = false): Promise<AuditEntry> {
+  async execute(userInput: string, approved: boolean = false, compiledIntent?: any): Promise<AuditEntry> {
     const trace: string[] = [];
     
     try {
-      trace.push("L1: Decoding intent");
-      const intent = await this.compiler.compile(userInput);
-      trace.push(`Intent: ${intent.action} (${intent.environment})`);
+      const intent = compiledIntent || (await this.compiler.compile(userInput));
+      trace.push(`L1: Intent identified: ${intent.action} (${intent.environment})`);
       
       trace.push("L2: Policy evaluation");
       const policy = this.policyEngine.evaluate(intent, { approved });

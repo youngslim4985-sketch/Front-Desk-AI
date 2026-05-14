@@ -41,6 +41,8 @@ interface AuditEntry {
   decisionTrace: string[];
 }
 
+import { intentCompiler } from "../lib/intent";
+
 export default function AutonomousDashboard({ onBack }: { onBack: () => void }) {
   const [command, setCommand] = useState("");
   const [logs, setLogs] = useState<AuditEntry[]>([]);
@@ -52,10 +54,14 @@ export default function AutonomousDashboard({ onBack }: { onBack: () => void }) 
     setLoading(true);
     setError(null);
     try {
+      // 1. Compile intent in frontend (Adheres to gemini-api skill)
+      const compiledIntent = await intentCompiler.compile(command);
+
+      // 2. Send compiled intent to backend for orchestration
       const response = await fetch("/api/orchestrate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ input: command, approved })
+        body: JSON.stringify({ intent: compiledIntent, approved })
       });
 
       const data = await response.json();
@@ -88,18 +94,18 @@ export default function AutonomousDashboard({ onBack }: { onBack: () => void }) 
             className="flex items-center gap-2 text-gray-400 hover:text-white mb-2 transition-colors text-sm font-medium"
           >
             <ChevronRight className="w-4 h-4 rotate-180" />
-            Back to Operator Console
+            Back to Intake Center
           </button>
           <h1 className="text-3xl font-bold text-white flex items-center gap-3">
             <Shield className="w-8 h-8 text-blue-500" />
-            Safety Kernel Dashboard
+            Intake Assurance Kernel
           </h1>
-          <p className="text-gray-400 mt-2">Autonomous Execution System with Operator Overrides</p>
+          <p className="text-gray-400 mt-2">Autonomous Workflow Monitoring & Critical Escalation System</p>
         </div>
         <div className="flex gap-4">
           <div className="px-4 py-2 bg-green-500/10 border border-green-500/20 rounded-lg flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-            <span className="text-xs font-mono text-green-500">SYSTEM: ARMED</span>
+            <span className="text-xs font-mono text-green-500">MONITORING: ACTIVE</span>
           </div>
         </div>
       </header>
@@ -117,7 +123,7 @@ export default function AutonomousDashboard({ onBack }: { onBack: () => void }) 
                 value={command}
                 onChange={(e) => setCommand(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && executeCommand()}
-                placeholder="e.g., 'deploy api to production'"
+                placeholder="e.g., 'open matter for John Smith' or 'run conflict check'"
                 className="w-full bg-black border border-zinc-800 rounded-lg p-4 text-white font-mono focus:outline-none focus:border-blue-500 transition-colors"
                 disabled={loading}
               />
@@ -147,7 +153,7 @@ export default function AutonomousDashboard({ onBack }: { onBack: () => void }) 
                     className="px-4 py-2 bg-yellow-500 text-black text-sm font-bold rounded hover:bg-yellow-400 flex items-center gap-2"
                   >
                     <Unlock className="w-4 h-4" />
-                    AUTHORIZE PRODUCTION DEPLOY
+                    AUTHORIZE HIGH-RISK MATTER
                   </button>
                 </motion.div>
               )}

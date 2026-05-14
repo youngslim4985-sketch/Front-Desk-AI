@@ -1,25 +1,33 @@
-import { Intent } from '../../types';
+import { GoogleGenAI } from "@google/genai";
 import { v4 as uuidv4 } from 'uuid';
-import { GoogleGenerativeAI } from "@google/generative-ai";
+
+export interface Intent {
+  version: string;
+  id: string;
+  action: string;
+  params: any;
+  environment: 'development' | 'staging' | 'production';
+  timestamp: string;
+}
 
 export class IntentCompiler {
-  private genAI: GoogleGenerativeAI | null = null;
+  private ai: GoogleGenAI | null = null;
 
   constructor() {
     if (process.env.GEMINI_API_KEY) {
-      this.genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+      this.ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
     }
   }
 
   async compile(userInput: string): Promise<Intent> {
     let action = 'unknown';
     let params: any = { raw: userInput };
-    let environment: 'development' | 'staging' | 'production' = 'development';
+    let environment: 'development' | 'staging' | 'production' = 'production';
 
-    if (this.genAI) {
+    if (this.ai) {
       try {
         const systemPrompt = `
-          You are a DevOps Intent Compiler. Your job is to parse natural language commands into a structured JSON intent.
+          You are a Legal Intake Intent Compiler. Your job is to parse natural language commands into a structured JSON intent.
           
           Supported Actions: 
           - open_legal_matter (requires client_name, practice_area)
@@ -36,13 +44,16 @@ export class IntentCompiler {
           }
         `;
 
-        const model = this.genAI.getGenerativeModel({ 
-          model: "gemini-1.5-flash",
-          systemInstruction: systemPrompt
+        const response = await this.ai.models.generateContent({
+          model: "gemini-3-flash-preview",
+          contents: `Parse this command: "${userInput}"`,
+          config: {
+            systemInstruction: systemPrompt,
+            responseMimeType: "application/json"
+          }
         });
 
-        const response = await model.generateContent(`Parse this command: "${userInput}"`);
-        const text = response.response.text() || "";
+        const text = response.text || "";
         const parsed = JSON.parse(text);
         action = parsed.action || action;
         params = parsed.params || params;
@@ -82,3 +93,5 @@ export class IntentCompiler {
     return { action: 'unknown', params: { raw: input }, environment: 'production' };
   }
 }
+
+export const intentCompiler = new IntentCompiler();

@@ -4,7 +4,6 @@ import dotenv from "dotenv";
 import { createClient } from "@supabase/supabase-js";
 import Stripe from "stripe";
 import twilio from "twilio";
-import { GoogleGenAI } from "@google/genai";
 import { randomUUID } from "crypto";
 import path from "path";
 import { createServer as createViteServer } from "vite";
@@ -122,9 +121,9 @@ async function startServer() {
 
   // NEW: Autonomous Orchestration Endpoint
   app.post("/api/orchestrate", async (req, res) => {
-    const { input, approved } = req.body;
+    const { input, intent, approved } = req.body;
     try {
-      const result = await orchestrator.execute(input, approved);
+      const result = await orchestrator.execute(input, approved, intent);
       res.json(result);
     } catch (err: any) {
       res.status(400).json({ error: err.message });

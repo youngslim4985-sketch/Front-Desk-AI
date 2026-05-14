@@ -154,21 +154,20 @@ export default function Dashboard({ onSwitch }: { onSwitch: () => void }) {
         </div>
 
         <nav className="flex-1 space-y-2">
-          <SidebarItem icon={LayoutDashboard} label="Dashboard" active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} />
-          <SidebarItem icon={Mic2} label="Voice" active={activeTab === 'voice'} onClick={() => setActiveTab('voice')} />
-          <SidebarItem icon={AlertTriangle} label="Escalations" active={activeTab === 'escalations'} onClick={() => setActiveTab('escalations')} />
-          <SidebarItem icon={Plus} label="Leads" active={activeTab === 'leads'} onClick={() => setActiveTab('leads')} />
-          <SidebarItem icon={Calendar} label="Appointments" active={activeTab === 'appointments'} onClick={() => setActiveTab('appointments')} />
-          <SidebarItem icon={Users} label="Customers" active={activeTab === 'customers'} onClick={() => setActiveTab('customers')} />
-          <SidebarItem icon={Code} label="Embed Widget" active={activeTab === 'embed'} onClick={() => setActiveTab('embed')} />
-          <SidebarItem icon={BarChart3} label="Analytics" active={activeTab === 'analytics'} onClick={() => setActiveTab('analytics')} />
+          <SidebarItem icon={LayoutDashboard} label="Intake Center" active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} />
+          <SidebarItem icon={Mic2} label="After-Hours Voice" active={activeTab === 'voice'} onClick={() => setActiveTab('voice')} />
+          <SidebarItem icon={AlertTriangle} label="Urgent Escalations" active={activeTab === 'escalations'} onClick={() => setActiveTab('escalations')} />
+          <SidebarItem icon={Plus} label="New Matters" active={activeTab === 'leads'} onClick={() => setActiveTab('leads')} />
+          <SidebarItem icon={Calendar} label="Consultations" active={activeTab === 'appointments'} onClick={() => setActiveTab('appointments')} />
+          <SidebarItem icon={Users} label="Clients" active={activeTab === 'customers'} onClick={() => setActiveTab('customers')} />
+          <SidebarItem icon={Code} label="Embed Intake" active={activeTab === 'embed'} onClick={() => setActiveTab('embed')} />
           <div className="pt-2">
             <button 
               onClick={onSwitch}
               className="w-full flex items-center gap-3 px-4 py-3 rounded-lg bg-indigo-600/10 text-indigo-400 border border-indigo-600/20 hover:bg-indigo-600 hover:text-white transition-all group"
             >
               <ShieldAlert size={20} className="group-hover:animate-pulse" />
-              <span className="font-bold text-xs uppercase tracking-widest">Safety Kernel</span>
+              <span className="font-bold text-xs uppercase tracking-widest">Intake Assurance</span>
             </button>
           </div>
         </nav>
