@@ -49,6 +49,22 @@ export default function AutonomousDashboard({ onBack }: { onBack: () => void }) 
   const [pendingAction, setPendingAction] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [systemStatus, setSystemStatus] = useState<{ status: string; system: string }>({ status: "OK", system: "HEALTHY" });
+
+  useEffect(() => {
+    const checkHealth = async () => {
+      try {
+        const res = await fetch("/api/health");
+        const data = await res.json();
+        setSystemStatus(data);
+      } catch (e) {
+        setSystemStatus(prev => ({ ...prev, system: "CRITICAL" }));
+      }
+    };
+    const interval = setInterval(checkHealth, 5000);
+    checkHealth();
+    return () => clearInterval(interval);
+  }, []);
 
   const executeCommand = async (approved = false) => {
     setLoading(true);
@@ -103,9 +119,23 @@ export default function AutonomousDashboard({ onBack }: { onBack: () => void }) 
           <p className="text-gray-400 mt-2">Autonomous Workflow Monitoring & Critical Escalation System</p>
         </div>
         <div className="flex gap-4">
-          <div className="px-4 py-2 bg-green-500/10 border border-green-500/20 rounded-lg flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-            <span className="text-xs font-mono text-green-500">MONITORING: ACTIVE</span>
+          <div className={`px-4 py-2 rounded-lg flex items-center gap-2 border ${
+            systemStatus.system === 'HEALTHY' ? 'bg-green-500/10 border-green-500/20' : 
+            systemStatus.system === 'DEGRADED' ? 'bg-yellow-500/10 border-yellow-500/20' : 
+            'bg-red-500/10 border-red-500/20'
+          }`}>
+            <div className={`w-2 h-2 rounded-full animate-pulse ${
+              systemStatus.system === 'HEALTHY' ? 'bg-green-500' : 
+              systemStatus.system === 'DEGRADED' ? 'bg-yellow-500' : 
+              'bg-red-500'
+            }`} />
+            <span className={`text-xs font-mono font-bold ${
+              systemStatus.system === 'HEALTHY' ? 'text-green-500' : 
+              systemStatus.system === 'DEGRADED' ? 'text-yellow-500' : 
+              'text-red-500'
+            }`}>
+              MONITORING: {systemStatus.system}
+            </span>
           </div>
         </div>
       </header>
@@ -236,6 +266,17 @@ export default function AutonomousDashboard({ onBack }: { onBack: () => void }) 
               Runtime Guards
             </h3>
             <div className="space-y-4">
+              <div className="p-3 bg-black/50 rounded-lg space-y-1">
+                <div className="flex justify-between text-[10px] font-bold text-gray-500">
+                  <span>DEAD-MAN_SWITCH</span>
+                  <span className={systemStatus.system === 'HEALTHY' ? 'text-green-400' : 'text-red-400'}>
+                    {systemStatus.system === 'HEALTHY' ? 'ARMED' : 'TRIGGERED'}
+                  </span>
+                </div>
+                <div className="w-full bg-zinc-800 h-1 rounded-full">
+                  <div className={`h-full rounded-full transition-all duration-500 ${systemStatus.system === 'HEALTHY' ? 'w-full bg-green-500' : 'w-1/3 bg-red-500'}`} />
+                </div>
+              </div>
               <div className="p-3 bg-black/50 rounded-lg space-y-1">
                 <div className="flex justify-between text-[10px] font-bold text-gray-500">
                   <span>BUDGET_UTILIZATION</span>

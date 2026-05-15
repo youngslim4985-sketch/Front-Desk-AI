@@ -10,6 +10,8 @@ import { createServer as createViteServer } from "vite";
 import { ConversationEngine } from "./server/engine";
 import { orchestrator } from "./server/autonomous/orchestration/workflow";
 import { VoiceReceptionist } from "./server/voice-engine";
+import { globalDeadMan, globalIdempotency, CallState, ALLOWED_TRANSITIONS } from "./server/autonomous/layers/failure/control-plane";
+import { verifyTwilioSignature } from "./server/lib/twilio-security";
 
 dotenv.config();
 
@@ -19,6 +21,12 @@ async function startServer() {
 
   app.use(cors());
   app.use(express.json());
+  app.use(express.urlencoded({ extended: true }));
+
+  // Simulate Worker Heartbeat (In production, workers push this periodically)
+  setInterval(() => {
+    globalDeadMan.push();
+  }, 5000);
 
   // --- PRIVATE CLIENT INITIALIZERS ---
   
@@ -42,24 +50,50 @@ async function startServer() {
 
   // --- API ROUTES ---
 
-  app.get("/api/health", (req, res) => res.json({ status: "OK", timestamp: new Date() }));
+  app.get("/api/health", (req, res) => {
+    res.json({ 
+      status: "OK", 
+      timestamp: new Date(),
+      system: globalDeadMan.getStatus() 
+    });
+  });
 
   // --- TWILIO VOICE WEBHOOKS ---
-  app.post("/api/twilio/voice/incoming", (req, res) => {
+  app.post("/api/twilio/voice/incoming", verifyTwilioSignature, (req, res) => {
+    const { CallSid, From, To, SequenceNumber = "0" } = req.body;
+    const idempotencyKey = `${CallSid}_${SequenceNumber}_start`;
+
+    // 1. Dead-Man Switch Guard
+    if (globalDeadMan.shouldFailClosed()) {
+      console.error(`[Safety] DEAD-MAN TRIGGERED for call ${CallSid}. Failing closed.`);
+      const twiml = new twilio.twiml.VoiceResponse();
+      twiml.say({ voice: 'Polly.Amy', language: 'en-GB' }, "We are experiencing a system update. Connecting you to a senior intake officer immediately.");
+      twiml.dial("+15550000000"); // Standard operator cell
+      return res.type("text/xml").send(twiml.toString());
+    }
+
     const twiml = new twilio.twiml.VoiceResponse();
-    twiml.say({ voice: 'Polly.Amy', language: 'en-GB' }, "Hello, thanks for calling Front Desk A I. How can I help you today?");
+    twiml.say({ voice: 'Polly.Amy', language: 'en-GB' }, "Thank you for calling LexGuard. Are you calling regarding a new legal matter?");
     twiml.gather({
       input: ['speech'],
       action: "/api/twilio/voice/handle-input",
       timeout: 3,
       speechTimeout: 'auto'
     });
-    res.type("text/xml").send(twiml.toString());
+    
+    const xml = twiml.toString();
+    globalIdempotency.set(idempotencyKey, xml);
+    res.type("text/xml").send(xml);
   });
 
-  app.post("/api/twilio/voice/handle-input", async (req, res) => {
-    const transcript = req.body.SpeechResult;
-    const callSid = req.body.CallSid;
+  app.post("/api/twilio/voice/handle-input", verifyTwilioSignature, async (req, res) => {
+    const { SpeechResult, CallSid, SequenceNumber = "0" } = req.body;
+    const transcript = SpeechResult;
+    const idempotencyKey = `${CallSid}_${SequenceNumber}_input`;
+
+    // Idempotency check
+    const cached = globalIdempotency.get(idempotencyKey);
+    if (cached) return res.type("text/xml").send(cached);
 
     if (!voiceReceptionist) {
       const twiml = new twilio.twiml.VoiceResponse();
@@ -74,7 +108,7 @@ async function startServer() {
       const supabase = getSupabase();
       if (supabase) {
         await supabase.from("call_transcripts").insert([{
-          call_sid: callSid,
+          call_sid: CallSid,
           transcript: transcript || "[No Speech Detected]",
           response: responseText,
           timestamp: new Date().toISOString()
