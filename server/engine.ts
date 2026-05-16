@@ -1,60 +1,27 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { AIProvider } from "./providers/ai/AIProvider";
 import { randomUUID } from "crypto";
 import { 
   ChatMessage, 
   ConversationState, 
   ConversationEvent, 
-  ProcessResult,
-  Intent
+  ProcessResult
 } from "./types";
+import { createLogger } from "./observability/logger";
+import { CallContext } from "./types/infrastructure";
+
+const log = createLogger("ConversationEngine");
 
 export class ConversationEngine {
-  private genAI: GoogleGenerativeAI;
+  constructor(private ai: AIProvider) {}
 
-  constructor(apiKey: string) {
-    this.genAI = new GoogleGenerativeAI(apiKey);
-  }
-
-  // 1. Probabilistic Decoder (Gemini)
-  // Maps natural language turn into a structured intent + parameters
+  // 1. Probabilistic Decoder (AI Provider)
   private async decodeIntent(
     businessName: string, 
     userMessage: string, 
-    history: ChatMessage[]
-  ): Promise<{ intent: Intent; confidence: number; parameters: any }> {
-    const systemPrompt = `You are the Intent Decoder for ${businessName}'s receptionist.
-Your only job is to analyze the user's latest message and output a JSON object representing their intent.
-
-Available Intents:
-- PRICING_INQUIRY: User asking about costs, rates, or fees.
-- BOOKING_REQUEST: User wanting to schedule, book, or visit.
-- ESCALATION_THREAT: User expressing frustration, anger, or demanding a human/supervisor.
-- GENERAL_INQUIRY: Normal questions or small talk.
-
-Output Format:
-{
-  "intent": "INTENT_NAME",
-  "confidence": 0.0 to 1.0,
-  "parameters": {
-    "name": "extracted name if any",
-    "phone": "extracted phone if any",
-    "topic": "summary of the inquiry"
-  }
-}`;
-
-    try {
-      const model = this.genAI.getGenerativeModel({ 
-        model: "gemini-1.5-flash",
-        systemInstruction: systemPrompt
-      });
-
-      const response = await model.generateContent(`User Message: ${userMessage}`);
-      const text = response.response.text() || "{}";
-      return JSON.parse(text);
-    } catch (e) {
-      console.error("Failed to parse intent JSON:", e);
-      return { intent: "GENERAL_INQUIRY", confidence: 0.5, parameters: {} };
-    }
+    context: CallContext
+  ) {
+    log.info("Decoding intent", { userMessage, tenantId: context.tenantId });
+    return this.ai.decodeIntent(userMessage, context);
   }
 
   // 2. Deterministic State Machine (The Kernel)
@@ -95,12 +62,24 @@ Output Format:
     }
 
     // 2. Decoder Turn
-    const decoded = await this.decodeIntent(businessName, userMessage, history);
+    const context: CallContext = { 
+      traceId: randomUUID(), // This should ideally come from correlation context
+      tenantId: businessId, 
+      sessionId, 
+      from: "unknown", 
+      to: "unknown" 
+    };
+    
+    const decoded = await this.decodeIntent(businessName, userMessage, context);
     events.push({
       id: randomUUID(),
       sessionId,
       type: "intent_detected",
-      payload: decoded,
+      payload: { 
+        intent: decoded.intent, 
+        confidence: decoded.confidence, 
+        parameters: decoded.parameters 
+      },
       timestamp: new Date().toISOString()
     });
 
@@ -108,7 +87,7 @@ Output Format:
     state.context = {
       ...state.context,
       ...decoded.parameters,
-      lastIntent: decoded.intent,
+      lastIntent: decoded.intent as any,
       confidence: decoded.confidence
     };
 
@@ -136,9 +115,9 @@ Output Format:
     else {
       // Default generative response for general queries
       try {
-        const model = this.genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-        const response = await model.generateContent(`You are a receptionist for ${businessName}. Answer this question briefly: "${userMessage}"`);
-        botResponse = response.response.text() || "I'm sorry, I'm not sure how to help with that.";
+        const context: CallContext = { traceId: randomUUID(), tenantId: businessId, sessionId, from: "unknown", to: "unknown" };
+        const response = await this.ai.generateResponse(`You are a receptionist for ${businessName}. Answer this question briefly: "${userMessage}"`, context);
+        botResponse = response.text || "I'm sorry, I'm not sure how to help with that.";
       } catch (err) {
         botResponse = "I'm sorry, I'm having trouble connecting right now.";
       }

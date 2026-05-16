@@ -12,6 +12,11 @@ import { orchestrator } from "./server/autonomous/orchestration/workflow";
 import { VoiceReceptionist } from "./server/voice-engine";
 import { globalDeadMan, globalIdempotency, CallState, ALLOWED_TRANSITIONS } from "./server/autonomous/layers/failure/control-plane";
 import { verifyTwilioSignature } from "./server/lib/twilio-security";
+import { middlewareCorrelation } from "./server/correlation/trace";
+import { middlewareTenantResolution } from "./server/tenants/service";
+import { OutboxService } from "./server/outbox/service";
+import { EventType } from "./server/types/infrastructure";
+import { GeminiProvider } from "./server/providers/ai/GeminiProvider";
 
 dotenv.config();
 
@@ -22,6 +27,8 @@ async function startServer() {
   app.use(cors());
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
+  app.use(middlewareCorrelation);
+  app.use(middlewareTenantResolution);
 
   // Simulate Worker Heartbeat (In production, workers push this periodically)
   setInterval(() => {
@@ -44,8 +51,9 @@ async function startServer() {
     return twilio(sid, auth);
   };
 
-  // Initialize Engine
-  const engine = process.env.GEMINI_API_KEY ? new ConversationEngine(process.env.GEMINI_API_KEY) : null;
+  // Initialize Providers
+  const aiProvider = process.env.GEMINI_API_KEY ? new GeminiProvider(process.env.GEMINI_API_KEY) : null;
+  const engine = aiProvider ? new ConversationEngine(aiProvider) : null;
   const voiceReceptionist = process.env.GEMINI_API_KEY ? new VoiceReceptionist(process.env.GEMINI_API_KEY) : null;
 
   // --- API ROUTES ---
@@ -59,9 +67,13 @@ async function startServer() {
   });
 
   // --- TWILIO VOICE WEBHOOKS ---
-  app.post("/api/twilio/voice/incoming", verifyTwilioSignature, (req, res) => {
+  app.post("/api/twilio/voice/incoming", verifyTwilioSignature, async (req: any, res) => {
     const { CallSid, From, To, SequenceNumber = "0" } = req.body;
-    const idempotencyKey = `${CallSid}_${SequenceNumber}_start`;
+    const tenantId = req.tenant.id;
+    const idempotencyKey = `${tenantId}_${CallSid}_${SequenceNumber}_start`;
+
+    // Record event in Outbox for replayability
+    await OutboxService.record(tenantId, EventType.VOICE_INCOMING, { CallSid, From, To });
 
     // 1. Dead-Man Switch Guard
     if (globalDeadMan.shouldFailClosed()) {
@@ -86,10 +98,13 @@ async function startServer() {
     res.type("text/xml").send(xml);
   });
 
-  app.post("/api/twilio/voice/handle-input", verifyTwilioSignature, async (req, res) => {
+  app.post("/api/twilio/voice/handle-input", verifyTwilioSignature, async (req: any, res) => {
     const { SpeechResult, CallSid, SequenceNumber = "0" } = req.body;
     const transcript = SpeechResult;
-    const idempotencyKey = `${CallSid}_${SequenceNumber}_input`;
+    const tenantId = req.tenant.id;
+    const idempotencyKey = `${tenantId}_${CallSid}_${SequenceNumber}_input`;
+
+    await OutboxService.record(tenantId, EventType.VOICE_INPUT, { CallSid, transcript });
 
     // Idempotency check
     const cached = globalIdempotency.get(idempotencyKey);
