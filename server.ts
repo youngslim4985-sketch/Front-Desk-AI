@@ -16,7 +16,7 @@ import { middlewareCorrelation } from "./server/correlation/trace";
 import { middlewareTenantResolution } from "./server/tenants/service";
 import { OutboxService } from "./server/outbox/service";
 import { EventType } from "./server/types/infrastructure";
-import { GeminiProvider } from "./server/providers/ai/GeminiProvider";
+import { ClaudeProvider } from "./server/providers/ai/ClaudeProvider";
 
 dotenv.config();
 
@@ -52,9 +52,9 @@ async function startServer() {
   };
 
   // Initialize Providers
-  const aiProvider = process.env.GEMINI_API_KEY ? new GeminiProvider(process.env.GEMINI_API_KEY) : null;
+  const aiProvider = process.env.ANTHROPIC_API_KEY ? new ClaudeProvider(process.env.ANTHROPIC_API_KEY) : null;
   const engine = aiProvider ? new ConversationEngine(aiProvider) : null;
-  const voiceReceptionist = process.env.GEMINI_API_KEY ? new VoiceReceptionist(process.env.GEMINI_API_KEY) : null;
+  const voiceReceptionist = process.env.ANTHROPIC_API_KEY ? new VoiceReceptionist(process.env.ANTHROPIC_API_KEY) : null;
 
   // --- API ROUTES ---
 
@@ -62,7 +62,8 @@ async function startServer() {
     res.json({ 
       status: "OK", 
       timestamp: new Date(),
-      system: globalDeadMan.getStatus() 
+      system: globalDeadMan.getStatus(),
+      ai_engine: "Claude (Anthropic)"
     });
   });
 
@@ -136,6 +137,48 @@ async function startServer() {
       const twiml = new twilio.twiml.VoiceResponse();
       twiml.say("I'm sorry, I'm having trouble processing that call right now.");
       res.type("text/xml").send(twiml.toString());
+    }
+  });
+
+  // Proxy endpoints for frontend AI requests (Safety/Security)
+  app.post("/api/intent/compile", async (req, res) => {
+    const { input } = req.body;
+    try {
+      if (!orchestrator) throw new Error("Orchestrator not initialized");
+      const intent = await (orchestrator as any).compiler.compile(input);
+      res.json(intent);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post("/api/intent/decode", async (req: any, res) => {
+    const { businessName, userMessage } = req.body;
+    const tenantId = req.tenant.id;
+    try {
+      if (!aiProvider) throw new Error("AI Provider not initialized");
+      const context = { traceId: randomUUID(), tenantId, sessionId: randomUUID(), from: "frontend", to: "ai" };
+      const decoded = await aiProvider.decodeIntent(userMessage, context);
+      res.json({
+        intent: decoded.intent,
+        confidence: decoded.confidence,
+        parameters: decoded.parameters
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post("/api/chat/generate", async (req: any, res) => {
+    const { businessName, userMessage, history } = req.body;
+    const tenantId = req.tenant.id;
+    try {
+      if (!aiProvider) throw new Error("AI Provider not initialized");
+      const context = { traceId: randomUUID(), tenantId, sessionId: randomUUID(), from: "frontend", to: "ai" };
+      const response = await aiProvider.generateResponse(`You are a receptionist for ${businessName}. Answer this question briefly: "${userMessage}"`, context, history);
+      res.json({ response: response.text });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
     }
   });
 

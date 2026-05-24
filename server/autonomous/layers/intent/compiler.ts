@@ -1,13 +1,13 @@
 import { Intent } from '../../types';
 import { v4 as uuidv4 } from 'uuid';
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import Anthropic from '@anthropic-ai/sdk';
 
 export class IntentCompiler {
-  private genAI: GoogleGenerativeAI | null = null;
+  private anthropic: Anthropic | null = null;
 
   constructor() {
-    if (process.env.GEMINI_API_KEY) {
-      this.genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    if (process.env.ANTHROPIC_API_KEY) {
+      this.anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
     }
   }
 
@@ -16,7 +16,7 @@ export class IntentCompiler {
     let params: any = { raw: userInput };
     let environment: 'development' | 'staging' | 'production' = 'development';
 
-    if (this.genAI) {
+    if (this.anthropic) {
       try {
         const systemPrompt = `
           You are a DevOps Intent Compiler. Your job is to parse natural language commands into a structured JSON intent.
@@ -36,13 +36,14 @@ export class IntentCompiler {
           }
         `;
 
-        const model = this.genAI.getGenerativeModel({ 
-          model: "gemini-1.5-flash",
-          systemInstruction: systemPrompt
+        const response = await this.anthropic.messages.create({
+          model: "claude-3-5-sonnet-20240620",
+          max_tokens: 1024,
+          system: systemPrompt,
+          messages: [{ role: "user", content: `Parse this command: "${userInput}"` }]
         });
 
-        const response = await model.generateContent(`Parse this command: "${userInput}"`);
-        const text = response.response.text() || "";
+        const text = response.content[0].type === 'text' ? response.content[0].text : "";
         const parsed = JSON.parse(text);
         action = parsed.action || action;
         params = parsed.params || params;

@@ -1,11 +1,11 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import Anthropic from '@anthropic-ai/sdk';
 import twilio from "twilio";
 
 export class VoiceReceptionist {
-  private genAI: GoogleGenerativeAI;
+  private anthropic: Anthropic;
 
   constructor(apiKey: string) {
-    this.genAI = new GoogleGenerativeAI(apiKey);
+    this.anthropic = new Anthropic({ apiKey });
   }
 
   async generateResponse(transcript: string, history: any[] = []) {
@@ -24,15 +24,16 @@ export class VoiceReceptionist {
     `;
 
     try {
-      const model = this.genAI.getGenerativeModel({ 
-        model: "gemini-1.5-flash",
-        systemInstruction: systemPrompt
+      const response = await this.anthropic.messages.create({
+        model: "claude-3-5-sonnet-20240620",
+        max_tokens: 1024,
+        system: systemPrompt,
+        messages: [{ role: "user", content: transcript }]
       });
 
-      const response = await model.generateContent(transcript);
-      return response.response.text();
+      return response.content[0].type === 'text' ? response.content[0].text : '';
     } catch (err) {
-      console.error("Gemini Backend Error:", err);
+      console.error("Claude Backend Error:", err);
       return "I'm sorry, I'm having trouble processing your request. One moment while I connect you.";
     }
   }
