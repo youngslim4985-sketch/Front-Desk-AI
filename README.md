@@ -1,45 +1,74 @@
+# LexGuard AI™ 
+### After-Hours Litigation Intake Protection & Autonomous Workflow Assurance
 
-# Front Desk AI™
+![Status](https://img.shields.io/badge/T%26F-GOLD--STANDARD-D4AF37)
+![Version](https://img.shields.io/badge/v-1.0.0--beta-blue)
+![License](https://img.shields.io/badge/License-Proprietary-red)
 
-**The intelligent platform for vertical AI solutions.**  
-**First vertical:** [LexGuard AI™](https://github.com/yourusername/lexguard-ai) — AI-powered legal operations.
-
----
-
-## Overview
-
-**Front Desk AI™** is a scalable, secure, multi-tenant AI platform designed to power specialized vertical applications. It provides core infrastructure (authentication, orchestration, data handling, security, and billing) while allowing clean, independent vertical modules to be plugged in.
-
-**Current Vertical:**
-- **LexGuard AI™** — Legal document intelligence, contract analysis, client intake, compliance automation, and privileged information handling.
-
-**Future Verticals (planned):**
-- MedDesk — Healthcare operations
-- ShopDesk — Retail & e-commerce intelligence
-- And more...
+> **"Architecture distributes. Focus compounds."**  
+> *The T&F standard for high-stakes operational infrastructure.*
 
 ---
 
-## Key Features
+## ⚖️ The Mission
+LexGuard AI™ is a specialized, mission-critical control plane designed for mid-size litigation firms and personal injury practices. It eliminates the "After-Hours Leakage" problem by providing a hardened, AI-driven intake engine that understands the difference between a general inquiry and a high-stakes statute-of-limitations emergency.
 
-- **Multi-Tenant Architecture** — Secure isolation between customers and verticals
-- **AI Orchestration Layer** — Seamless integration between Spring Boot backend and Flask ML services
-- **Enterprise-Grade Security** — Built with PPLGuard AI security framework
-- **Vertical Extensibility** — Clean separation between core platform and domain-specific logic
-- **Compliance Ready** — Designed with GDPR, CCPA, and industry-specific regulations in mind (especially legal)
-- **Observability & Monitoring** — Full logging, anomaly detection, and audit trails
+LexGuard isn't just a chatbot; it's a **Workflow Assurance Kernel** that monitors, escalates, and secures every potential new matter.
 
 ---
 
-## Architecture
+## 🛠 Features
 
-- **Backend**: Spring Boot (Java/Kotlin) — Core API, user management, business logic
-- **AI/ML Layer**: Flask (Python) — Machine learning models, document intelligence, anomaly detection
-- **Security Module**: PPLGuard AI — Dedicated threat detection, ML-based anomaly protection, and hardening
-- **Database**: PostgreSQL (with potential vector extensions for RAG)
-- **Containerization**: Docker + Docker Compose
-- **CI/CD**: GitHub Actions with security scanning
-- **Monitoring**: ELK Stack + custom dashboards
+| Feature | Description |
+| :--- | :--- |
+| **High-Fidelity Legal Voice** | Multi-turn Twilio-powered legal intake with emotive, professional personas (built on Gemini 1.5 Flash). |
+| **Intake Assurance Kernel** | A "Dead-Man Switch" architectural pattern that ensures critical calls never experience silence, even during partial system degradation. |
+| **Intent Decoupling** | Frontend-side intent compilation to reduce backend latency and improve operator visibility. |
+| **Policy Engine** | Strict validation rules (e.g., Conflict Checks mandatory before matter creation). |
+| **Probabilistic Routing** | Intelligent escalation based on urgency markers (e.g., "served with process", "hearing tomorrow"). |
+| **Audit-Ready Logging** | Every decision trace is logged for compliance and malpractice protection. |
+| **Idempotent Webhooks** | Hardened signature verification for Twilio endpoints to prevent double-billing or missed events. |
+| **Unified Inbox** | Real-time dashboard for managing intakes, escalations, and appointments. |
+
+---
+
+## 🏗 Tech Stack
+
+- **Frontend**: React 19 + Vite + Tailwind CSS 4.0
+- **Animations**: Framer Motion (LexGuard Signature Transitions)
+- **Backend**: Node.js (TypeScript) + Express
+- **AI Core**: Google Gemini 1.5 Flash (via `@google/generative-ai`)
+- **Database**: Supabase (PostgreSQL) + Redis (Simulated for State Management)
+- **Communications**: Twilio Voice + Gathering API
+- **Safety Kernel**: Custom Circuit Breakers, Dead-Man Switches, and Rollback Registries
+
+---
+
+## 📂 Project Structure
+
+```text
+├── server/                 # The "Assurance Kernel" Backend
+│   ├── autonomous/         # Autonomous Execution Layers
+│   │   ├── layers/         # Intent, Policy, Simulation, Execution
+│   │   └── orchestration/  # Workflow state machine
+│   ├── engine.ts           # Probabilistic Intent Decoder
+│   ├── voice-engine.ts     # Twilio TwiML Generation Logic
+│   └── lib/                # Security (Twilio verification, etc.)
+├── src/                    # The "Intake Center" Frontend
+│   ├── components/         # Dashboard & Autonomous Monitors
+│   ├── lib/                # Client-side workflow & Intent compilation
+│   └── App.tsx             # Main entry & Router
+├── server.ts               # Production-grade Express Server
+└── metadata.json           # Application Identity & Permissions
+```
+
+---
+
+## 🚀 Quick Start
+
+### 1. Prerequisites
+- Node.js 18+
+- Twilio Account (for Voice production)
 - Gemini API Key
 
 ### 2. Environment Setup

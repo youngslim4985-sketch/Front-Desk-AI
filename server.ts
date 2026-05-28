@@ -18,6 +18,8 @@ import { OutboxService } from "./server/outbox/service";
 import { EventType } from "./server/types/infrastructure";
 import { ClaudeProvider } from "./server/providers/ai/ClaudeProvider";
 
+import { AIOrchestrator } from "./server/autonomous/orchestration/AIOrchestrator";
+
 dotenv.config();
 
 async function startServer() {
@@ -53,6 +55,7 @@ async function startServer() {
 
   // Initialize Providers
   const aiProvider = process.env.ANTHROPIC_API_KEY ? new ClaudeProvider(process.env.ANTHROPIC_API_KEY) : null;
+  const aiOrchestrator = process.env.ANTHROPIC_API_KEY ? new AIOrchestrator(process.env.ANTHROPIC_API_KEY) : null;
   const engine = aiProvider ? new ConversationEngine(aiProvider) : null;
   const voiceReceptionist = process.env.ANTHROPIC_API_KEY ? new VoiceReceptionist(process.env.ANTHROPIC_API_KEY) : null;
 
@@ -65,6 +68,30 @@ async function startServer() {
       system: globalDeadMan.getStatus(),
       ai_engine: "Claude (Anthropic)"
     });
+  });
+
+  // NEW: Advanced Orchestration Endpoint (Claude Tool Use)
+  app.post("/api/orchestrate/v2", async (req: any, res) => {
+    const { message, history } = req.body;
+    const tenantId = req.tenant.id;
+    
+    try {
+      if (!aiOrchestrator) throw new Error("Orchestrator not initialized. Check ANTHROPIC_API_KEY.");
+      
+      const context = { 
+        traceId: randomUUID(), 
+        tenantId, 
+        sessionId: randomUUID(), 
+        from: "frontend", 
+        to: "ai" 
+      };
+
+      const result = await aiOrchestrator.process(message, context, history);
+      res.json(result);
+    } catch (err: any) {
+      console.error("Orchestration Error:", err);
+      res.status(500).json({ error: err.message });
+    }
   });
 
   // --- TWILIO VOICE WEBHOOKS ---

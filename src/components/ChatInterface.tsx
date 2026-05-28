@@ -1,200 +1,148 @@
-import React, { useState, useRef, useEffect } from "react";
-import { workflowEngine } from "../lib/workflow";
-import { Send, User, Bot, Loader2, Calendar } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import React, { useState, useRef, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { Send, User, Bot, AlertCircle, ChevronRight, Calendar, Phone } from 'lucide-react';
 
 interface Message {
-  role: "user" | "assistant";
+  role: 'user' | 'assistant';
   content: string;
 }
 
-export default function ChatInterface({ businessName, businessId }: { businessName: string; businessId: string }) {
+export default function ChatInterface() {
   const [messages, setMessages] = useState<Message[]>([
-    { role: "assistant", content: `Hello! I'm the AI assistant for ${businessName}. How can I help you today?` }
+    { role: 'assistant', content: "Hello, I am LexGuard's Front Desk AI. How can I assist you with your legal intake or booking today?" }
   ]);
-  const [input, setInput] = useState("");
+  const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [showLeadCapture, setShowLeadCapture] = useState(false);
-  const [leadForm, setLeadForm] = useState({ name: "", phone: "", email: "" });
-  const [leadSaved, setLeadSaved] = useState(false);
-  
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages, loading]);
+  }, [messages]);
 
-  const saveLead = async (formData: typeof leadForm) => {
-    try {
-      await fetch('/api/leads', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...formData,
-          business_id: businessId,
-          inquiry: messages[messages.length - 2]?.content || "Inquiry from chat"
-        })
-      });
-      setLeadSaved(true);
-      setTimeout(() => setShowLeadCapture(false), 2000);
-    } catch (err) {
-      console.error("Failed to save lead", err);
-    }
-  };
-
-  const sendMessage = async () => {
+  const handleSend = async () => {
     if (!input.trim() || loading) return;
 
-    const userMessage = input.trim();
-    const newMessages = [...messages, { role: "user" as const, content: userMessage }];
-    setMessages(newMessages);
-    setInput("");
+    const userMsg: Message = { role: 'user', content: input };
+    setMessages(prev => [...prev, userMsg]);
+    setInput('');
     setLoading(true);
 
     try {
-      // Execute the frontend bounded decision system (Adheres to gemini-api skill)
-      const result = await workflowEngine.run(businessName, userMessage, messages);
+      const response = await fetch('/api/orchestrate/v2', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: input,
+          history: messages.map(m => ({ role: m.role === 'assistant' ? 'model' : 'user', content: m.content }))
+        })
+      });
 
-      setMessages([...newMessages, { role: "assistant", content: result.response }]);
-      
-      // Explicitly trigger UI based on workflow decision
-      if (result.action === "capture_lead") {
-        setShowLeadCapture(true);
-      } else if (result.action === "escalate") {
-        console.warn("High priority escalation triggered:", result.workflowId);
+      const data = await response.json();
+      if (data.reply) {
+        setMessages(prev => [...prev, { role: 'assistant', content: data.reply }]);
       }
     } catch (err) {
-      console.error("Chat Error:", err);
-      setMessages([
-        ...newMessages,
-        { role: "assistant", content: "Sorry, I'm having trouble connecting right now." },
-      ]);
+      console.error(err);
+      setMessages(prev => [...prev, { role: 'assistant', content: "I'm having trouble connecting to my brain right now. Please try again." }]);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="flex flex-col h-full w-full bg-white text-slate-900 font-sans">
+    <div className="flex flex-col h-[600px] w-full max-w-2xl mx-auto bg-obsidian-light border border-white/5 rounded-2xl overflow-hidden shadow-2xl">
       {/* Header */}
-      <div className="bg-slate-900 p-4 border-b border-slate-800 flex items-center gap-3">
-        <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center">
-          <Bot size={18} className="text-white" />
-        </div>
-        <div>
-          <div className="text-sm font-bold text-white leading-tight">{businessName} Assistant</div>
-          <div className="text-[10px] text-emerald-400 flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-            Online
+      <div className="p-4 border-b border-white/5 flex items-center justify-between bg-obsidian">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-gold/10 border border-gold/20 flex items-center justify-center">
+            <Bot className="w-5 h-5 text-gold" />
           </div>
+          <div>
+            <h3 className="text-sm font-bold tracking-tight text-white/90">LexGuard AI™</h3>
+            <p className="text-[10px] uppercase tracking-widest text-gold font-bold">Autonomous Receptionist</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+          <span className="text-[10px] font-mono text-green-500">LIVE</span>
         </div>
       </div>
 
       {/* Messages */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4 scroll-smooth">
-        {messages.map((msg, i) => (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            key={i}
-            className={`flex items-start gap-2 ${msg.role === "user" ? "flex-row-reverse" : ""}`}
-          >
-            <div className={`w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center ${
-              msg.role === "user" ? "bg-slate-200" : "bg-blue-100"
-            }`}>
-              {msg.role === "user" ? <User size={16} className="text-slate-600" /> : <Bot size={16} className="text-blue-600" />}
-            </div>
-            <div
-              className={`max-w-[80%] p-3 rounded-2xl text-sm leading-relaxed shadow-sm ${
-                msg.role === "user"
-                  ? "bg-blue-600 text-white rounded-tr-none"
-                  : "bg-slate-100 text-slate-800 rounded-tl-none border border-slate-200"
-              }`}
+      <div 
+        ref={scrollRef}
+        className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-hide"
+      >
+        <AnimatePresence initial={false}>
+          {messages.map((m, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className={`flex gap-4 ${m.role === 'user' ? 'flex-row-reverse' : ''}`}
             >
-              {msg.content}
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 border ${
+                m.role === 'user' ? 'bg-white/5 border-white/10' : 'bg-gold/10 border-gold/20'
+              }`}>
+                {m.role === 'user' ? <User className="w-4 h-4 text-white/60" /> : <Bot className="w-4 h-4 text-gold" />}
+              </div>
+              <div className={`max-w-[80%] rounded-2xl p-4 text-sm leading-relaxed ${
+                m.role === 'user' 
+                  ? 'bg-white/5 text-white/90 rounded-tr-none border border-white/5' 
+                  : 'bg-obsidian text-white/80 rounded-tl-none border border-white/5'
+              }`}>
+                {m.content}
+              </div>
+            </motion.div>
+          ))}
+        </AnimatePresence>
+        {loading && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="flex gap-4"
+          >
+            <div className="w-8 h-8 rounded-full bg-gold/10 border border-gold/20 flex items-center justify-center">
+              <Bot className="w-4 h-4 text-gold" />
+            </div>
+            <div className="flex items-center gap-1 p-4 bg-obsidian rounded-2xl rounded-tl-none border border-white/5">
+              <span className="w-1 h-1 bg-gold rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+              <span className="w-1 h-1 bg-gold rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+              <span className="w-1 h-1 bg-gold rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
             </div>
           </motion.div>
-        ))}
-        {loading && (
-          <div className="flex items-center gap-2 text-slate-400">
-            <Loader2 size={16} className="animate-spin" />
-            <span className="text-xs font-medium uppercase tracking-widest">Assistant is typing...</span>
-          </div>
         )}
-        
-        {/* Inline Lead Capture */}
-        <AnimatePresence>
-          {showLeadCapture && !leadSaved && (
-            <motion.div 
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="bg-blue-50 border border-blue-200 rounded-2xl p-4 mt-2 space-y-3 shadow-md"
-            >
-              <div className="flex items-center gap-2 text-blue-800 font-bold text-sm">
-                <Calendar size={16} />
-                Request a Follow-up
-              </div>
-              <p className="text-xs text-blue-600">Enter your details and our team will get back to you shortly.</p>
-              <div className="space-y-2">
-                <input 
-                  type="text" 
-                  placeholder="Full Name" 
-                  className="w-full text-xs p-2.5 rounded-lg border border-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  value={leadForm.name}
-                  onChange={e => setLeadForm({...leadForm, name: e.target.value})}
-                />
-                <input 
-                  type="tel" 
-                  placeholder="Phone Number" 
-                  className="w-full text-xs p-2.5 rounded-lg border border-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  value={leadForm.phone}
-                  onChange={e => setLeadForm({...leadForm, phone: e.target.value})}
-                />
-                <button 
-                  onClick={() => saveLead(leadForm)}
-                  className="w-full bg-blue-600 text-white font-bold py-2.5 rounded-lg text-sm hover:bg-blue-700 transition-colors"
-                >
-                  Send Inquiry
-                </button>
-              </div>
-            </motion.div>
-          )}
-          {leadSaved && (
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 text-center mt-2"
-            >
-              <div className="text-emerald-700 font-bold text-sm">Inquiry Sent!</div>
-              <p className="text-xs text-emerald-600">We'll be in touch soon.</p>
-            </motion.div>
-          )}
-        </AnimatePresence>
       </div>
 
       {/* Input */}
-      <div className="p-4 border-t border-slate-100 bg-white">
-        <div className="flex gap-2 bg-slate-100 p-1.5 rounded-2xl border border-slate-200 focus-within:border-blue-400 focus-within:ring-1 focus-within:ring-blue-400 transition-all">
+      <div className="p-4 bg-obsidian border-t border-white/5">
+        <div className="relative group">
           <input
-            className="flex-1 bg-transparent px-3 py-2 text-sm focus:outline-none"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
-            placeholder="How can we help?"
+            onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+            placeholder="Type your message..."
+            className="w-full bg-obsidian-light border border-white/10 rounded-xl py-3 pl-4 pr-12 text-sm text-white/90 placeholder:text-white/20 focus:outline-none focus:border-gold/50 transition-all"
           />
           <button
-            onClick={sendMessage}
+            onClick={handleSend}
             disabled={!input.trim() || loading}
-            className="bg-blue-600 text-white p-2.5 rounded-xl block hover:bg-blue-700 disabled:opacity-50 transition-all shadow-sm"
+            className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg bg-gold/10 text-gold hover:bg-gold hover:text-obsidian transition-all disabled:opacity-50 disabled:hover:bg-gold/10"
           >
-            <Send size={18} />
+            <Send className="w-4 h-4" />
           </button>
         </div>
-        <div className="mt-3 text-[9px] text-center text-slate-400 uppercase tracking-widest font-bold">
-          Powered by Front Desk AI™
+        <div className="mt-3 flex items-center gap-4 px-1">
+          <div className="flex items-center gap-1.5 text-[10px] text-white/30">
+            <Calendar className="w-3 h-3 text-gold/50" />
+            <span>Smart Booking</span>
+          </div>
+          <div className="flex items-center gap-1.5 text-[10px] text-white/30">
+            <Phone className="w-3 h-3 text-gold/50" />
+            <span>Legal Triage</span>
+          </div>
         </div>
       </div>
     </div>

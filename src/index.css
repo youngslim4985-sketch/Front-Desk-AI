@@ -4,10 +4,15 @@
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Outfit", sans-serif;
+  
+  --color-obsidian: #0B0E14;
+  --color-obsidian-light: #161B22;
+  --color-gold: #D4AF37;
+  --color-gold-muted: rgba(212, 175, 55, 0.2);
 }
 
 body {
-  @apply bg-black text-white antialiased;
+  @apply bg-obsidian text-white antialiased;
   font-family: var(--font-sans);
 }
 
