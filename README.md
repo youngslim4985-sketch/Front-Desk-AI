@@ -8,7 +8,7 @@
 > **"Architecture distributes. Focus compounds."**  
 > *The T&F standard for high-stakes operational infrastructure.*
 
----
+
 
 ## ⚖️ The Mission
 LexGuard AI™ is a specialized, mission-critical control plane designed for mid-size litigation firms and personal injury practices. It eliminates the "After-Hours Leakage" problem by providing a hardened, AI-driven intake engine that understands the difference between a general inquiry and a high-stakes statute-of-limitations emergency.
