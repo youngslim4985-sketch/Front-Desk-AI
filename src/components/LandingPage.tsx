@@ -1,108 +1,91 @@
-import { motion } from 'framer-motion';
-import { Phone, CheckCircle, ArrowRight, Shield, Zap, Globe } from 'lucide-react';
+import { motion } from 'motion/react';
+import { Phone, CheckCircle, ArrowRight, Shield, Zap, Globe, Briefcase, TrendingUp } from 'lucide-react';
 
 export default function LandingPage({ onStart, onLogin }: { onStart: () => void; onLogin: () => void }) {
   return (
-    <div className="min-h-screen bg-black text-white selection:bg-blue-500/30">
-      {/* Navigation */}
-      <nav className="flex justify-between items-center px-8 py-6 max-w-7xl mx-auto">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-            <Phone size={20} className="text-white" />
-          </div>
-          <span className="text-xl font-bold tracking-tight">Front Desk AI</span>
-        </div>
-        <div className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-400">
-          <a href="#features" className="hover:text-white transition-colors">Features</a>
-          <a href="#pricing" className="hover:text-white transition-colors">Pricing</a>
-          <button onClick={onLogin} className="hover:text-white transition-colors">Login</button>
-        </div>
-        <button 
-          onClick={onStart}
-          className="bg-white text-black px-6 py-2 rounded-full font-semibold hover:bg-slate-200 transition-all"
-        >
-          Get Started
-        </button>
-      </nav>
-
+    <div className="min-h-screen bg-obsidian text-white selection:bg-gold/30">
       {/* Hero Section */}
-      <section className="px-8 pt-20 pb-32 max-w-7xl mx-auto text-center">
+      <section className="px-8 pt-20 pb-32 max-w-7xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
+          className="text-center"
         >
-          <span className="inline-block px-4 py-1.5 mb-6 text-sm font-semibold tracking-wider text-blue-400 uppercase bg-blue-400/10 rounded-full border border-blue-400/20">
-            Now Powered by Gemini 1.5
-          </span>
-          <h1 className="text-6xl md:text-8xl font-bold tracking-tighter mb-8 leading-[0.9]">
-            NEVER MISS <br />
-            <span className="text-blue-600">ANOTHER CALL.</span>
+          <div className="inline-flex items-center gap-2 px-3 py-1 bg-gold/10 border border-gold/20 rounded-full text-[10px] uppercase tracking-widest text-gold font-bold mb-8">
+            <Zap className="w-3 h-3" />
+            Autonomous Revenue Infrastructure
+          </div>
+          
+          <h1 className="text-6xl md:text-8xl font-display font-bold tracking-tighter mb-8 leading-[0.9] text-white">
+            REVENUE <br />
+            <span className="text-gold">ASSURANCE.</span>
           </h1>
-          <p className="text-xl text-slate-400 max-w-2xl mx-auto mb-12 leading-relaxed">
-            The AI receptionist that answers, books, and converts calls 24/7. 
-            Automate your front desk and recover missed revenue instantly.
+          
+          <p className="text-xl text-white/40 max-w-2xl mx-auto mb-12 leading-relaxed font-sans">
+            LexGuard AI™ is your 24/7 autonomous front desk. We don't just answer calls; 
+            we perform conflict checks, triage leads, and secure bookings for high-stakes law firms.
           </p>
+          
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <button 
               onClick={onStart}
-              className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-2xl font-bold text-lg flex items-center justify-center gap-2 transition-all shadow-xl shadow-blue-600/20"
+              className="w-full sm:w-auto bg-gold text-obsidian px-8 py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-2 hover:bg-white transition-all shadow-xl shadow-gold/10"
             >
-              Start Free Trial
+              Protect My Intake
               <ArrowRight size={20} />
             </button>
-            <button className="w-full sm:w-auto bg-slate-900 hover:bg-slate-800 text-white px-8 py-4 rounded-2xl font-bold text-lg transition-all border border-slate-800">
-              Book a Demo
+            <button className="w-full sm:w-auto bg-white/5 hover:bg-white/10 text-white px-8 py-4 rounded-xl font-bold text-lg transition-all border border-white/5">
+              Calculated Lost Revenue
             </button>
           </div>
         </motion.div>
 
-        {/* Social Proof */}
+        {/* Vertical Wedge Proof */}
         <motion.div 
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.4, duration: 0.8 }}
-          className="mt-24 pt-12 border-t border-slate-900"
+          className="mt-24 pt-12 border-t border-white/5"
         >
-          <p className="text-sm font-semibold text-slate-500 uppercase tracking-widest mb-8">
-            Trusted by 500+ Businesses
+          <p className="text-[10px] font-bold text-white/20 uppercase tracking-[0.2em] mb-12 text-center">
+            Securing Matters For Global Practices
           </p>
-          <div className="flex flex-wrap justify-center gap-12 opacity-50 grayscale">
-            <div className="text-2xl font-bold">MEDICARE</div>
-            <div className="text-2xl font-bold">DENTALHUB</div>
-            <div className="text-2xl font-bold">LAWGROUP</div>
-            <div className="text-2xl font-bold">SALONPRO</div>
+          <div className="flex flex-wrap justify-center gap-12 opacity-30 grayscale hover:grayscale-0 transition-all">
+            <div className="flex items-center gap-2 font-display font-bold text-xl"><Shield className="w-5 h-5" /> LexGuard Global</div>
+            <div className="flex items-center gap-2 font-display font-bold text-xl"><Briefcase className="w-5 h-5" /> Prime Intake</div>
+            <div className="flex items-center gap-2 font-display font-bold text-xl"><TrendingUp className="w-5 h-5" /> Scale Legal</div>
           </div>
         </motion.div>
       </section>
 
-      {/* Features Grid */}
-      <section className="px-8 py-32 bg-slate-950">
+      {/* Outcome Grid */}
+      <section className="px-8 py-32 bg-obsidian-light border-y border-white/5">
         <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <FeatureCard 
               icon={Zap}
-              title="Instant Booking"
-              description="AI handles the entire booking flow via voice or SMS, syncing directly with your calendar."
+              title="Autonomous Triage"
+              description="Claude-3.5-powered decision loops identify high-value leads and perform conflict checks instantly."
             />
             <FeatureCard 
               icon={Shield}
-              title="Missed Call Recovery"
-              description="Automatically text back missed calls to ensure you never lose a potential lead again."
+              title="Revenue Guard"
+              description="Automatically recovers missed calls with context-aware SMS sequences designed for legal urgency."
             />
             <FeatureCard 
               icon={Globe}
-              title="24/7 Availability"
-              description="Your front desk never sleeps. Handle calls at 3 AM just as professionally as at 3 PM."
+              title="White-Label Ready"
+              description="Modular infrastructure built for agencies. Rebrand and deploy LexGuard as your own premium service."
             />
           </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="px-8 py-12 border-t border-slate-900 text-center">
-        <p className="text-slate-500 text-sm">
-          © 2024 Front Desk AI™. Owned by T & F Investments and Holdings LLC.
+      <footer className="px-8 py-12 text-center opacity-20 hover:opacity-100 transition-opacity">
+        <p className="text-white text-[10px] font-mono tracking-widest uppercase">
+          © 2026 LexGuard AI™ // Infrastructure by T & F Investments
         </p>
       </footer>
     </div>
@@ -111,12 +94,12 @@ export default function LandingPage({ onStart, onLogin }: { onStart: () => void;
 
 function FeatureCard({ icon: Icon, title, description }: { icon: any, title: string, description: string }) {
   return (
-    <div className="p-8 rounded-3xl bg-black border border-slate-900 hover:border-blue-600/50 transition-all group">
-      <div className="w-12 h-12 bg-blue-600/10 rounded-2xl flex items-center justify-center text-blue-500 mb-6 group-hover:scale-110 transition-transform">
+    <div className="p-8 rounded-2xl bg-obsidian border border-white/5 hover:border-gold/30 transition-all group">
+      <div className="w-12 h-12 bg-gold/10 rounded-xl flex items-center justify-center text-gold mb-6 group-hover:bg-gold group-hover:text-obsidian transition-all">
         <Icon size={24} />
       </div>
-      <h3 className="text-xl font-bold mb-4">{title}</h3>
-      <p className="text-slate-400 leading-relaxed">{description}</p>
+      <h3 className="text-lg font-bold mb-3 text-white/90 font-display">{title}</h3>
+      <p className="text-sm text-white/40 leading-relaxed font-sans">{description}</p>
     </div>
   );
 }

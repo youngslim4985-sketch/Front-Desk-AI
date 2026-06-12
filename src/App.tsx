@@ -7,8 +7,9 @@ import Widget from './components/Widget';
 import AutonomousDashboard from './components/AutonomousDashboard';
 import ChatInterface from './components/ChatInterface';
 import LaunchBrief from './components/LaunchBrief';
+import GoToMarketKit from './components/GoToMarketKit';
 
-type View = 'landing' | 'login' | 'onboarding' | 'dashboard' | 'autonomous' | 'chat' | 'brief';
+type View = 'landing' | 'login' | 'onboarding' | 'dashboard' | 'autonomous' | 'chat' | 'brief' | 'launch';
 
 export default function App() {
   const [view, setView] = useState<View>('landing');
@@ -36,7 +37,8 @@ export default function App() {
         <div className="flex gap-6 text-sm font-medium text-white/60">
           <button onClick={() => setView('landing')} className={`hover:text-gold transition-colors ${view === 'landing' ? 'text-gold' : ''}`}>System</button>
           <button onClick={() => setView('chat')} className={`hover:text-gold transition-colors ${view === 'chat' ? 'text-gold' : ''}`}>AI Console</button>
-          <button onClick={() => setView('brief')} className={`hover:text-gold transition-colors ${view === 'brief' ? 'text-gold' : ''}`}>GTM Brief</button>
+          <button onClick={() => setView('brief')} className={`hover:text-gold transition-colors ${view === 'brief' ? 'text-gold' : ''}`}>Brief</button>
+          <button onClick={() => setView('launch')} className={`hover:text-gold transition-colors ${view === 'launch' ? 'text-gold' : ''}`}>🚀 Launch</button>
           <button onClick={() => setView('dashboard')} className={`hover:text-gold transition-colors ${view === 'dashboard' ? 'text-gold' : ''}`}>Admin</button>
         </div>
       </nav>
@@ -78,10 +80,14 @@ export default function App() {
         {view === 'brief' && (
           <LaunchBrief />
         )}
+
+        {view === 'launch' && (
+          <GoToMarketKit />
+        )}
       </main>
 
       {/* Floating Chat Widget for Demo */}
-      {view !== 'chat' && view !== 'brief' && (
+      {view !== 'chat' && view !== 'brief' && view !== 'launch' && (
         <Widget 
           businessName="T & F Investments" 
           businessId="tf-invest-123" 
