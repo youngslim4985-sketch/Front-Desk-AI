@@ -59,6 +59,17 @@ async function startServer() {
   const engine = aiProvider ? new ConversationEngine(aiProvider) : null;
   const voiceReceptionist = process.env.ANTHROPIC_API_KEY ? new VoiceReceptionist(process.env.ANTHROPIC_API_KEY) : null;
 
+  // Store recent logs for mobile console
+  const globalLogBuffer: any[] = [];
+  const logToBuffer = (message: string, severity: string = "INFO") => {
+    globalLogBuffer.unshift({ 
+      timestamp: new Date().toISOString(), 
+      message, 
+      severity 
+    });
+    if (globalLogBuffer.length > 50) globalLogBuffer.pop();
+  };
+
   // --- API ROUTES ---
 
   app.get("/api/health", (req, res) => {
@@ -70,6 +81,10 @@ async function startServer() {
     });
   });
 
+  app.get("/api/orchestrate/logs", (req, res) => {
+    res.json(globalLogBuffer);
+  });
+
   // NEW: Advanced Orchestration Endpoint (Claude Tool Use)
   app.post("/api/orchestrate/v2", async (req: any, res) => {
     const { message, history } = req.body;
@@ -77,6 +92,8 @@ async function startServer() {
     
     try {
       if (!aiOrchestrator) throw new Error("Orchestrator not initialized. Check ANTHROPIC_API_KEY.");
+      
+      logToBuffer(`Chat message: "${message}"`, "USER");
       
       const context = { 
         traceId: randomUUID(), 
@@ -87,6 +104,7 @@ async function startServer() {
       };
 
       const result = await aiOrchestrator.process(message, context, history);
+      logToBuffer(`Reply: "${result.reply.substring(0, 50)}..."`, "AI");
       res.json(result);
     } catch (err: any) {
       console.error("Orchestration Error:", err);
@@ -99,6 +117,8 @@ async function startServer() {
     const { CallSid, From, To, SequenceNumber = "0" } = req.body;
     const tenantId = req.tenant.id;
     const idempotencyKey = `${tenantId}_${CallSid}_${SequenceNumber}_start`;
+
+    logToBuffer(`Incoming call from ${From} to ${To}`, "VOICE");
 
     // Record event in Outbox for replayability
     await OutboxService.record(tenantId, EventType.VOICE_INCOMING, { CallSid, From, To });

@@ -8,7 +8,7 @@
 > **"Architecture distributes. Focus compounds."**  
 > *The T&F standard for high-stakes operational infrastructure.*
 
-
+---
 
 ## ⚖️ The Mission
 LexGuard AI™ is a specialized, mission-critical control plane designed for mid-size litigation firms and personal injury practices. It eliminates the "After-Hours Leakage" problem by providing a hardened, AI-driven intake engine that understands the difference between a general inquiry and a high-stakes statute-of-limitations emergency.
@@ -121,5 +121,6 @@ If the system detects >15s of core service heartbeat silence, the **Dead-Man Swi
 - [ ] HIPAA/SOC2 Hardening Suite
 
 ---
+
 © 2026 T&F Investments. Propitiatory Software. All Rights Reserved.  
 *Architecture is Destiny.*
