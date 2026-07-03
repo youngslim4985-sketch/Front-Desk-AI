@@ -1,4 +1,4 @@
-# LexGuard AI™ 
+# Front-Desk-AI ™ 
 ### After-Hours Litigation Intake Protection & Autonomous Workflow Assurance
 
 ![Status](https://img.shields.io/badge/T%26F-GOLD--STANDARD-D4AF37)
