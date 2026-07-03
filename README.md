@@ -125,3 +125,4 @@ If the system detects >15s of core service heartbeat silence, the **Dead-Man Swi
 © 2026 T&F Investments. Propitiatory Software. All Rights Reserved.  
 *Architecture is Destiny.*
 
+ 
