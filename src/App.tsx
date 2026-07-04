@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import LandingPage from './components/LandingPage';
-import Onboarding from './components/Onboarding';
+import OnboardingWizard from './components/OnboardingWizard';
 import Dashboard from './components/Dashboard';
 import Login from './components/Login';
 import Widget from './components/Widget';
@@ -53,7 +53,7 @@ export default function App() {
         )}
 
         {view === 'onboarding' && (
-          <Onboarding onComplete={() => {
+          <OnboardingWizard onComplete={() => {
             setIsLoggedIn(true);
             setView('dashboard');
           }} />

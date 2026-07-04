@@ -23,6 +23,9 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import VoiceDashboard from './VoiceDashboard';
+import AISettings from './AISettings';
+import Languages from './Languages';
+import Integrations from './Integrations';
 
 // --- Types ---
 interface Appointment {
@@ -86,6 +89,7 @@ const StatCard = ({ label, value, icon: Icon, trend }: { label: string, value: s
 
 export default function Dashboard({ onSwitch }: { onSwitch: () => void }) {
   const [activeTab, setActiveTab] = React.useState('dashboard');
+  const [settingsSubTab, setSettingsSubTab] = React.useState<'ai' | 'languages' | 'integrations'>('ai');
   const [isAddClientOpen, setIsAddClientOpen] = React.useState(false);
   const [newClient, setNewClient] = React.useState({ name: '', phone: '', email: '', notes: '' });
   const [clients, setClients] = React.useState<Client[]>(MOCK_CLIENTS);
@@ -173,7 +177,7 @@ export default function Dashboard({ onSwitch }: { onSwitch: () => void }) {
         </nav>
 
         <div className="pt-6 border-t border-slate-800 space-y-2">
-          <SidebarItem icon={Settings} label="Settings" onClick={() => {}} />
+          <SidebarItem icon={Settings} label="Settings" active={activeTab === 'settings'} onClick={() => { setActiveTab('settings'); setSettingsSubTab('ai'); }} />
           <SidebarItem icon={LogOut} label="Logout" onClick={() => {}} />
         </div>
       </aside>
@@ -464,6 +468,35 @@ export default function Dashboard({ onSwitch }: { onSwitch: () => void }) {
                   <div className="text-slate-400 text-xs">AI goes live instantly</div>
                 </div>
               </div>
+            </div>
+          </div>
+        ) : activeTab === 'settings' ? (
+          <div className="max-w-5xl space-y-8">
+            <div className="flex border-b border-white/5 pb-4 gap-6 text-sm font-medium">
+              <button 
+                onClick={() => setSettingsSubTab('ai')}
+                className={`pb-2 border-b-2 transition-all ${settingsSubTab === 'ai' ? 'border-gold text-gold font-bold' : 'border-transparent text-white/40 hover:text-white'}`}
+              >
+                AI Agent Core
+              </button>
+              <button 
+                onClick={() => setSettingsSubTab('languages')}
+                className={`pb-2 border-b-2 transition-all ${settingsSubTab === 'languages' ? 'border-gold text-gold font-bold' : 'border-transparent text-white/40 hover:text-white'}`}
+              >
+                Languages
+              </button>
+              <button 
+                onClick={() => setSettingsSubTab('integrations')}
+                className={`pb-2 border-b-2 transition-all ${settingsSubTab === 'integrations' ? 'border-gold text-gold font-bold' : 'border-transparent text-white/40 hover:text-white'}`}
+              >
+                Integrations & OAuth
+              </button>
+            </div>
+
+            <div className="mt-6">
+              {settingsSubTab === 'ai' && <AISettings businessId={businessId} />}
+              {settingsSubTab === 'languages' && <Languages businessId={businessId} />}
+              {settingsSubTab === 'integrations' && <Integrations businessId={businessId} />}
             </div>
           </div>
         ) : (

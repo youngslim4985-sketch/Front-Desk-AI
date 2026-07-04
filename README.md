@@ -1,4 +1,4 @@
-# Front-Desk-AI ™  
+# LexGuard AI™ 
 ### After-Hours Litigation Intake Protection & Autonomous Workflow Assurance
 
 ![Status](https://img.shields.io/badge/T%26F-GOLD--STANDARD-D4AF37)
@@ -90,6 +90,21 @@ npm run dev
 
 ---
 
+## 🎣 React Settings Hook-Driven Layer
+
+LexGuard’s frontend features a unified, decoupled state architecture driven by dedicated React hooks. This manages state drafts client-side, reducing unnecessary network overhead:
+
+-   **`useBusinessSettings`**: Manages business profile configurations (AI Persona, Safety Routing, System Prompt Contexts) with local state loading and explicit asynchronous save mechanisms.
+-   **`useLanguages`**: Manages multilingual translation targets. Owns its own local draft state (e.g., toggle/set-default) so checkbox selection does not trigger active network requests on every toggle; commits only on explicit user click.
+-   **`useIntegrations`**: Wraps secure third-party OAuth flows (Google Calendar, Clio, MyCase, Slack) and auto-saves the live connection states instantly on completion.
+
+### Refactored UI Components
+All settings sub-panels take `businessId` as their sole prop, loading, rendering, and persisting state autonomously through the hooks layer:
+1.  **`AISettings`**: Tweaks AI personality variables, forwarding numbers, tone rules, and core prompt contexts.
+2.  **`Languages`**: Displays available locales with toggle options, showing primary/secondary settings.
+3.  **`Integrations`**: Displays direct integrations with OAuth connection workflows.
+4.  **`OnboardingWizard`**: Standard onboarding layout rewired to use settings/language/integration hooks natively.
+
 ## 🛡 High-Stakes Architecture
 
 LexGuard operates on a **Safety Kernel** architecture. Every critical action (like opening a new matter) passes through three distinct layers:
@@ -124,5 +139,3 @@ If the system detects >15s of core service heartbeat silence, the **Dead-Man Swi
 
 © 2026 T&F Investments. Propitiatory Software. All Rights Reserved.  
 *Architecture is Destiny.*
-
- 
