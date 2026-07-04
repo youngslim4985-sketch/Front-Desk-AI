@@ -1,141 +1,81 @@
-# LexGuard AI™ 
-### After-Hours Litigation Intake Protection & Autonomous Workflow Assurance
+# Front Desk AI™ — User Customization & Multilingual Receptionist
 
-![Status](https://img.shields.io/badge/T%26F-GOLD--STANDARD-D4AF37)
-![Version](https://img.shields.io/badge/v-1.0.0--beta-blue)
-![License](https://img.shields.io/badge/License-Proprietary-red)
+**Branch:** `user-customization-multilingual`
 
-> **"Architecture distributes. Focus compounds."**  
-> *The T&F standard for high-stakes operational infrastructure.*
+## Overview
 
----
+This patch adds per-business customization and multilingual support to the
+Front Desk AI virtual receptionist. Business owners can configure their
+receptionist's tone, hours, escalation rules, and supported languages through
+a guided onboarding wizard and a persistent dashboard settings area.
 
-## ⚖️ The Mission
-LexGuard AI™ is a specialized, mission-critical control plane designed for mid-size litigation firms and personal injury practices. It eliminates the "After-Hours Leakage" problem by providing a hardened, AI-driven intake engine that understands the difference between a general inquiry and a high-stakes statute-of-limitations emergency.
+## What's Included
 
-LexGuard isn't just a chatbot; it's a **Workflow Assurance Kernel** that monitors, escalates, and secures every potential new matter.
+### Types
+- `src/types/business-settings.ts` — Shared TypeScript interfaces for
+  business profile, receptionist personality, language configuration, and
+  integration settings. Single source of truth consumed by onboarding and
+  dashboard components.
 
----
+### Lib
+- `src/lib/language-map.ts` — Canonical list of supported languages (ISO
+  codes, display names, locale-specific greeting defaults) plus helpers for
+  resolving a caller's preferred language.
+- `src/lib/receptionist-prompt.ts` — Builds the system prompt sent to the
+  underlying LLM/voice pipeline from a `BusinessSettings` object, injecting
+  tone, business hours, escalation policy, and active languages.
 
-## 🛠 Features
+### Hooks
+- `src/hooks/useBusinessSettings.ts` — Core fetch/save hook for a business's
+  `BusinessSettings`. All other hooks and components sit on top of this one.
+- `src/hooks/useLanguages.ts` — Owns a local language draft (toggle/set
+  default) and persists via `useBusinessSettings.save()`.
+- `src/hooks/useIntegrations.ts` — Wraps calendar/CRM OAuth connect flows and
+  persists the resulting connection state.
 
-| Feature | Description |
-| :--- | :--- |
-| **High-Fidelity Legal Voice** | Multi-turn Twilio-powered legal intake with emotive, professional personas (built on Gemini 1.5 Flash). |
-| **Intake Assurance Kernel** | A "Dead-Man Switch" architectural pattern that ensures critical calls never experience silence, even during partial system degradation. |
-| **Intent Decoupling** | Frontend-side intent compilation to reduce backend latency and improve operator visibility. |
-| **Policy Engine** | Strict validation rules (e.g., Conflict Checks mandatory before matter creation). |
-| **Probabilistic Routing** | Intelligent escalation based on urgency markers (e.g., "served with process", "hearing tomorrow"). |
-| **Audit-Ready Logging** | Every decision trace is logged for compliance and malpractice protection. |
-| **Idempotent Webhooks** | Hardened signature verification for Twilio endpoints to prevent double-billing or missed events. |
-| **Unified Inbox** | Real-time dashboard for managing intakes, escalations, and appointments. |
+### Onboarding
+- `src/components/onboarding/OnboardingWizard.tsx` — Multi-step wizard walking
+  a new business through: business profile → receptionist personality →
+  language selection → integrations → review & activate. Loads any
+  in-progress settings via `useBusinessSettings` and persists on "Activate".
 
----
+### Dashboard
+Components now take only a `businessId` prop and pull their data/mutations
+from the hooks above — no more `settings`/`onSave` prop drilling.
+- `src/components/dashboard/AISettings.tsx` — Edit receptionist tone, greeting
+  script, sign-off, and escalation rules. Uses `useBusinessSettings` directly.
+- `src/components/dashboard/Languages.tsx` — Add/remove supported languages,
+  set a default, and preview localized greetings. Uses `useLanguages`.
+- `src/components/dashboard/Integrations.tsx` — Manage connected calendar,
+  CRM, and phone provisioning integrations. Uses `useIntegrations`.
 
-## 🏗 Tech Stack
+## GitHub Integration Status
 
-- **Frontend**: React 19 + Vite + Tailwind CSS 4.0
-- **Animations**: Framer Motion (LexGuard Signature Transitions)
-- **Backend**: Node.js (TypeScript) + Express
-- **AI Core**: Google Gemini 1.5 Flash (via `@google/generative-ai`)
-- **Database**: Supabase (PostgreSQL) + Redis (Simulated for State Management)
-- **Communications**: Twilio Voice + Gathering API
-- **Safety Kernel**: Custom Circuit Breakers, Dead-Man Switches, and Rollback Registries
+Repo push automation is **not currently connected** — there's no GitHub MCP
+connector available in this workspace yet, so commits/pushes shown above must
+be run manually from your local checkout. This section will be updated if/when
+a GitHub connector becomes available.
 
----
+## Local Setup
 
-## 📂 Project Structure
-
-```text
-├── server/                 # The "Assurance Kernel" Backend
-│   ├── autonomous/         # Autonomous Execution Layers
-│   │   ├── layers/         # Intent, Policy, Simulation, Execution
-│   │   └── orchestration/  # Workflow state machine
-│   ├── engine.ts           # Probabilistic Intent Decoder
-│   ├── voice-engine.ts     # Twilio TwiML Generation Logic
-│   └── lib/                # Security (Twilio verification, etc.)
-├── src/                    # The "Intake Center" Frontend
-│   ├── components/         # Dashboard & Autonomous Monitors
-│   ├── lib/                # Client-side workflow & Intent compilation
-│   └── App.tsx             # Main entry & Router
-├── server.ts               # Production-grade Express Server
-└── metadata.json           # Application Identity & Permissions
-```
-
----
-
-## 🚀 Quick Start
-
-### 1. Prerequisites
-- Node.js 18+
-- Twilio Account (for Voice production)
-- Gemini API Key
-
-### 2. Environment Setup
-Create a `.env` file in the root directory:
-```env
-GEMINI_API_KEY=your_gemini_key
-SUPABASE_URL=your_supabase_url
-SUPABASE_SERVICE_ROLE_KEY=your_supabase_key
-TWILIO_ACCOUNT_SID=your_sid
-TWILIO_AUTH_TOKEN=your_token
-TWILIO_PHONE_NUMBER=your_phone
-```
-
-### 3. Installation & Launch
 ```bash
-npm install
-npm run dev
+git checkout -b user-customization-multilingual
+mkdir -p src/types src/lib src/hooks src/components/onboarding src/components/dashboard
+# copy the files from this patch into place
+git add README.md src/
+git commit -m "feat: add user customization and multilingual receptionist settings"
+git commit -m "feat: add business settings React hooks"
+git push -u origin user-customization-multilingual
 ```
 
----
+## Next Steps
 
-## 🎣 React Settings Hook-Driven Layer
-
-LexGuard’s frontend features a unified, decoupled state architecture driven by dedicated React hooks. This manages state drafts client-side, reducing unnecessary network overhead:
-
--   **`useBusinessSettings`**: Manages business profile configurations (AI Persona, Safety Routing, System Prompt Contexts) with local state loading and explicit asynchronous save mechanisms.
--   **`useLanguages`**: Manages multilingual translation targets. Owns its own local draft state (e.g., toggle/set-default) so checkbox selection does not trigger active network requests on every toggle; commits only on explicit user click.
--   **`useIntegrations`**: Wraps secure third-party OAuth flows (Google Calendar, Clio, MyCase, Slack) and auto-saves the live connection states instantly on completion.
-
-### Refactored UI Components
-All settings sub-panels take `businessId` as their sole prop, loading, rendering, and persisting state autonomously through the hooks layer:
-1.  **`AISettings`**: Tweaks AI personality variables, forwarding numbers, tone rules, and core prompt contexts.
-2.  **`Languages`**: Displays available locales with toggle options, showing primary/secondary settings.
-3.  **`Integrations`**: Displays direct integrations with OAuth connection workflows.
-4.  **`OnboardingWizard`**: Standard onboarding layout rewired to use settings/language/integration hooks natively.
-
-## 🛡 High-Stakes Architecture
-
-LexGuard operates on a **Safety Kernel** architecture. Every critical action (like opening a new matter) passes through three distinct layers:
-
-1.  **Compliance Policy Layer**: Checks if the action violates firm protocols (e.g., Conflict Search).
-2.  **Simulation Layer**: Dry-runs the execution to predict failures.
-3.  **Execution Runner**: Performs the atomic write with a registered rollback path in case of failure.
-
-If the system detects >15s of core service heartbeat silence, the **Dead-Man Switch** triggers, immediately failing-closed to a senior operator's cell phone to ensure zero missed leads.
-
----
-
-## 💰 LexGuard Licensing
-
-| Tier | Focus | Price |
-| :--- | :--- | :--- |
-| **LexGuard Alpha** | Solo/Compact Firms | $250/mo + Vol |
-| **LexGuard Shield** | Mid-Size Litigation | $1,200/mo + Vol |
-| **LexGuard Enterprise** | National Injury Groups | Contact Sales |
-
----
-
-## 🗺 Roadmap
-- [x] High-Stakes Voice Intake (Twilio + Gemini)
-- [x] Autonomous Safety Kernel (Dead-man switch)
-- [x] Intent-based Policy Routing
-- [ ] Google Calendar Integration (Beta)
-- [ ] Court-Case Filing Automation (Drafting)
-- [ ] HIPAA/SOC2 Hardening Suite
-
----
-
-© 2026 T&F Investments. Propitiatory Software. All Rights Reserved.  
-*Architecture is Destiny.*
+- [ ] Replace the `TODO`-marked `fetch`/`persistBusinessSettings` calls in
+      `useBusinessSettings.ts` with real API endpoints.
+- [ ] Replace `startOAuthFlow()` in `useIntegrations.ts` with a real OAuth
+      kickoff for Google/Outlook/HubSpot/QuickBooks.
+- [ ] Replace placeholder language list in `language-map.ts` with the final
+      set approved for the plumbing/home-services vertical launch.
+- [ ] Add unit tests for `buildReceptionistPrompt()` and the hooks (mock
+      fetch/persist functions).
+- [ ] Connect `Integrations.tsx` to Twilio provisioning status.
